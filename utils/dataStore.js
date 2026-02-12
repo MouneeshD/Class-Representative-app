@@ -1,5 +1,5 @@
-import Election from '../models/election.js';
-import Candidate from '../models/candidate.js';
+import Election from '../frontend/models/election';
+import Candidate from '../frontend/models/candidate';
 
 class UserProfile {
   constructor({ regNo, password, fullName, email, department, year = null }) {
@@ -21,23 +21,27 @@ class DataStore {
     this.registeredStudents = [];
     this.registeredFaculty = [];
 
-    // Demo credentials
+    // Demo credentials - FIXED: Use lowercase keys
     this.studentCredentials = {
-      student: 'student123',
+      'student': 'student123',
+      's001': 'pass123',
       '2021001': 'pass123',
     };
 
     this.facultyCredentials = {
-      faculty: 'faculty123',
+      'faculty': 'faculty123',
+      'fac001': 'admin123',
       'FAC001': 'admin123',
     };
   }
 
   register({ regNo, password, role, fullName, email, department, year = null }) {
+    const normalizedRegNo = regNo.toLowerCase();
+    
     if (role === 'student') {
       if (
-        this.registeredStudents.some((u) => u.regNo === regNo) ||
-        this.studentCredentials[regNo]
+        this.registeredStudents.some((u) => u.regNo.toLowerCase() === normalizedRegNo) ||
+        this.studentCredentials[normalizedRegNo]
       ) {
         return false;
       }
@@ -47,8 +51,8 @@ class DataStore {
       );
     } else {
       if (
-        this.registeredFaculty.some((u) => u.regNo === regNo) ||
-        this.facultyCredentials[regNo]
+        this.registeredFaculty.some((u) => u.regNo.toLowerCase() === normalizedRegNo) ||
+        this.facultyCredentials[normalizedRegNo]
       ) {
         return false;
       }
@@ -62,9 +66,12 @@ class DataStore {
   }
 
   login(regNo, password, role) {
+    const normalizedRegNo = regNo.toLowerCase();
+    
     if (role === 'student') {
+      // Check registered students first
       const user = this.registeredStudents.find(
-        (u) => u.regNo === regNo && u.password === password
+        (u) => u.regNo.toLowerCase() === normalizedRegNo && u.password === password
       );
 
       if (user) {
@@ -73,17 +80,19 @@ class DataStore {
         return true;
       }
 
+      // Check demo credentials
       if (
-        this.studentCredentials[regNo.toLowerCase()] &&
-        this.studentCredentials[regNo.toLowerCase()] === password
+        this.studentCredentials[normalizedRegNo] &&
+        this.studentCredentials[normalizedRegNo] === password
       ) {
         this.currentUserName = regNo;
         this.currentUserRole = role;
         return true;
       }
     } else {
+      // Check registered faculty first
       const user = this.registeredFaculty.find(
-        (u) => u.regNo === regNo && u.password === password
+        (u) => u.regNo.toLowerCase() === normalizedRegNo && u.password === password
       );
 
       if (user) {
@@ -92,9 +101,10 @@ class DataStore {
         return true;
       }
 
+      // Check demo credentials
       if (
-        this.facultyCredentials[regNo.toLowerCase()] &&
-        this.facultyCredentials[regNo.toLowerCase()] === password
+        this.facultyCredentials[normalizedRegNo] &&
+        this.facultyCredentials[normalizedRegNo] === password
       ) {
         this.currentUserName = regNo;
         this.currentUserRole = role;

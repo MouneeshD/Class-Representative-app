@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
-import DataStore from '../utils/dataStore.js';
+import DataStore from '../../utils/dataStore.js';
 
 export default function FacultyDashboard({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);

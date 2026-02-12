@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon} from '@expo/vector-icons';
-import DataStore from '../utils/dataStore.js';
+import DataStore from '../../utils/dataStore.js';
 
 export default function VotingScreen({ route, navigation }) {
   const { election } = route.params;
@@ -117,11 +117,8 @@ export default function VotingScreen({ route, navigation }) {
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cast Your Vote</Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Results', { election })}
-          style={styles.resultButton}
-        >
-          <Icon name="chart-bar" size={24} color="#FFFFFF" />
+        <TouchableOpacity>
+          
         </TouchableOpacity>
       </LinearGradient>
 

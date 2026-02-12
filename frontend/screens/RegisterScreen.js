@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import DataStore from '../utils/dataStore.js';
+import DataStore from '../../utils/dataStore.js';
 
 export default function RegisterScreen({ route, navigation }) {
   const { role } = route.params;
