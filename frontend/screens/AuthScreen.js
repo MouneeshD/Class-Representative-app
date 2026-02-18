@@ -7,35 +7,48 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
-import DataStore from '../../utils/dataStore.js';
+import DataStore from '../utils/dataStore.js';
 
 export default function AuthScreen({ route, navigation }) {
   const { role } = route.params;
   const [regNo, setRegNo] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isStudent = role === 'student';
   const colors = isStudent
     ? ['#6A1B9A', '#9C27B0']
     : ['#FF6F00', '#FF8F00'];
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!regNo.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
 
-    const success = DataStore.login(regNo.trim(), password.trim(), role);
+    setLoading(true);
+    
+    try {
+      const success = await DataStore.login(regNo.trim(), password.trim(), role);
 
-    if (success) {
-      Alert.alert('Success', 'Welcome back!');
-      navigation.replace(isStudent ? 'StudentDashboard' : 'FacultyDashboard');
-    } else {
-      Alert.alert('Error', 'Invalid credentials');
+      if (success) {
+        // Refresh elections after login
+        await DataStore.refreshElections();
+        
+        Alert.alert('Success', 'Welcome back!');
+        navigation.replace(isStudent ? 'StudentDashboard' : 'FacultyDashboard');
+      } else {
+        Alert.alert('Error', 'Invalid credentials');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,6 +87,7 @@ export default function AuthScreen({ route, navigation }) {
               value={regNo}
               onChangeText={setRegNo}
               autoCapitalize="none"
+              editable={!loading}
             />
           </View>
 
@@ -85,6 +99,7 @@ export default function AuthScreen({ route, navigation }) {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              editable={!loading}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
               <Icon
@@ -95,9 +110,13 @@ export default function AuthScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={handleLogin}>
+          <TouchableOpacity onPress={handleLogin} disabled={loading}>
             <LinearGradient colors={colors} style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>Login</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.loginButtonText}>Login</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
@@ -105,6 +124,7 @@ export default function AuthScreen({ route, navigation }) {
             <Text style={styles.registerText}>Don't have an account? </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Register', { role })}
+              disabled={loading}
             >
               <Text style={[styles.registerLink, { color: colors[0] }]}>
                 Register

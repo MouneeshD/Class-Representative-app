@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,39 +6,86 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import DataStore from '../utils/dataStore.js';
 
 export default function ElectionResultScreen({ route, navigation }) {
-  const { election } = route.params;
+  const { election: passedElection, electionId: passedId } = route.params;
+  const [election, setElection] = useState(passedElection || null);
+  const [loading, setLoading] = useState(!passedElection);
+
+  useEffect(() => {
+    if (!passedElection && passedId) {
+      loadElection(passedId);
+    } else if (passedElection) {
+      setElection(passedElection);
+      setLoading(false);
+    }
+  }, []);
+
+  const loadElection = async (id) => {
+    setLoading(true);
+    const fetched = await DataStore.getElectionById(id);
+    if (fetched) {
+      setElection(fetched);
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6A1B9A" />
+        <Text style={styles.loadingText}>Loading results...</Text>
+      </View>
+    );
+  }
+
+  if (!election) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Icon name="alert-circle" size={60} color="#FF6F00" />
+        <Text style={styles.loadingText}>Election not found</Text>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backBtnText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const winners = election.getWinners();
   const sortedCandidates = [...election.candidates].sort(
-    (a, b) => b.voteCount - a.voteCount
+    (a, b) => (b.vote_count || 0) - (a.vote_count || 0)
   );
 
-  const totalVotes = election.currentVoteCount || 1;
+  const totalVotes = election.currentVoteCount || 0;
   const isTie = winners.length > 1;
-  const maxVotes = winners.length > 0 ? winners[0].voteCount : 0;
+  const maxVoteCount = winners.length > 0 ? (winners[0].vote_count || 0) : 0;
 
   const renderCandidate = ({ item, index }) => {
     const isWinner = winners.some((w) => w.id === item.id);
-    const percentage = ((item.voteCount / totalVotes) * 100).toFixed(1);
+    const voteCount = item.vote_count || 0;
+    const percentage = totalVotes > 0
+      ? ((voteCount / totalVotes) * 100).toFixed(1)
+      : '0.0';
 
     return (
-      <View
-        style={[
-          styles.candidateCard,
-          isWinner && styles.winnerCard,
-        ]}
-      >
+      <View style={[styles.candidateCard, isWinner && styles.winnerCandidateCard]}>
         <View style={styles.candidateHeader}>
+          <View style={styles.positionBadge}>
+            <Text style={[styles.positionText, isWinner && styles.winnerPositionText]}>
+              #{index + 1}
+            </Text>
+          </View>
+
           <LinearGradient
-            colors={
-              isWinner
-                ? ['#FF6F00', '#FF8F00']
-                : ['#E0E0E0', '#BDBDBD']
-            }
+            colors={isWinner ? ['#FFD700', '#FFA000'] : ['#E0E0E0', '#BDBDBD']}
             style={styles.candidateAvatar}
           >
             <Text style={styles.candidateInitial}>
@@ -47,58 +94,34 @@ export default function ElectionResultScreen({ route, navigation }) {
           </LinearGradient>
 
           <View style={styles.candidateInfo}>
-            <View style={styles.positionRow}>
-              <View
-                style={[
-                  styles.positionBadge,
-                  {
-                    backgroundColor: isWinner ? '#FF6F0020' : '#E0E0E0',
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.positionText,
-                    { color: isWinner ? '#FF6F00' : '#666666' },
-                  ]}
-                >
-                  #{index + 1}
-                </Text>
+            <Text style={[styles.candidateName, isWinner && styles.winnerName]}>
+              {item.name}
+            </Text>
+            {item.qualification && (
+              <View style={styles.qualificationRow}>
+                <Icon name="school" size={12} color="#666666" />
+                <Text style={styles.qualification}>{item.qualification}</Text>
               </View>
-              <Text
-                style={[
-                  styles.candidateName,
-                  isWinner && { color: '#FF6F00' },
-                ]}
-              >
-                {item.name}
-              </Text>
-            </View>
-
-            <View style={styles.statsRow}>
-              <Icon name="chart-bar" size={16} color="#666666" />
-              <Text style={styles.statsText}>
-                {percentage}% • {item.voteCount}{' '}
-                {item.voteCount === 1 ? 'vote' : 'votes'}
+            )}
+            <View style={styles.voteRow}>
+              <Icon name="chart-bar" size={14} color={isWinner ? '#FFD700' : '#666666'} />
+              <Text style={[styles.voteText, isWinner && styles.winnerVoteText]}>
+                {voteCount} {voteCount === 1 ? 'vote' : 'votes'} ({percentage}%)
               </Text>
             </View>
           </View>
 
           {isWinner && (
-            <Icon name="trophy" size={28} color="#FF6F00" />
+            <View style={styles.trophyContainer}>
+              <Icon name="trophy" size={32} color="#FFD700" />
+            </View>
           )}
         </View>
 
-        {/* Progress Bar */}
         <View style={styles.progressBarContainer}>
-          <View
-            style={[
-              styles.progressBar,
-              {
-                width: `${percentage}%`,
-                backgroundColor: isWinner ? '#FF6F00' : '#6A1B9A',
-              },
-            ]}
+          <LinearGradient
+            colors={isWinner ? ['#FFD700', '#FFA000'] : ['#6A1B9A', '#9C27B0']}
+            style={[styles.progressBar, { width: `${Math.max(percentage, 2)}%` }]}
           />
         </View>
       </View>
@@ -108,102 +131,101 @@ export default function ElectionResultScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Election Results</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <ScrollView style={styles.content}>
-        {/* Election Info Card */}
-        <LinearGradient
-          colors={['#6A1B9A', '#9C27B0']}
-          style={styles.electionCard}
-        >
-          <View style={styles.electionHeader}>
-            <Icon name="vote" size={32} color="#FFFFFF" />
-            <Text style={styles.electionTitle}>{election.title}</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.electionInfoCard}>
+          <View style={styles.electionIconRow}>
+            <View style={styles.electionIconContainer}>
+              <Icon name="vote" size={28} color="#FFFFFF" />
+            </View>
+            <View style={styles.electionTitleContainer}>
+              <Text style={styles.electionTitle}>{election.title}</Text>
+              <Text style={styles.electionSubtitle}>Election ID: {election.id}</Text>
+            </View>
           </View>
 
-          <View style={styles.badgesRow}>
+          <View style={styles.infoBadgesRow}>
             <View style={styles.infoBadge}>
-              <Icon name="tag" size={16} color="#FFFFFF" />
-              <Text style={styles.badgeText}>ID: {election.id}</Text>
-            </View>
-            <View style={styles.infoBadge}>
-              <Icon name="account-group" size={16} color="#FFFFFF" />
-              <Text style={styles.badgeText}>
-                {election.currentVoteCount}/{election.maxVotes} Votes
-              </Text>
+              <Icon name="account-group" size={14} color="#FFFFFF" />
+              <Text style={styles.badgeText}>{election.currentVoteCount}/{election.maxVotes}</Text>
             </View>
             <View style={styles.infoBadge}>
               <Icon
-                name={election.isVotingClosed ? 'lock' : 'check-circle'}
-                size={16}
+                name={election.isClosed ? 'lock' : 'check-circle'}
+                size={14}
                 color="#FFFFFF"
               />
               <Text style={styles.badgeText}>
-                {election.isVotingClosed ? 'Closed' : 'Active'}
+                {election.isClosed ? 'Closed' : 'Active'}
               </Text>
             </View>
-          </View>
-
-          <View style={styles.dateRow}>
-            <Icon name="calendar" size={16} color="rgba(255,255,255,0.7)" />
-            <Text style={styles.dateText}>
-              Created: {new Date(election.createdAt).toLocaleDateString()}
-            </Text>
+            <View style={styles.infoBadge}>
+              <Icon name="calendar" size={14} color="#FFFFFF" />
+              <Text style={styles.badgeText}>
+                {new Date(election.createdAt).toLocaleDateString()}
+              </Text>
+            </View>
           </View>
         </LinearGradient>
 
-        {/* Winner Card */}
-        {election.candidates.length > 0 && (
+        {election.candidates.length > 0 && totalVotes > 0 ? (
           <LinearGradient
-            colors={isTie ? ['#FF9800', '#FF5722'] : ['#FFD700', '#FFA000']}
+            colors={isTie ? ['#FF9800', '#FB8C00'] : ['#FFD700', '#FFA000']}
             style={styles.winnerCard}
           >
-            <Icon
-              name={isTie ? 'star-four-points' : 'trophy'}
-              size={60}
-              color="#FFFFFF"
-            />
+            <View style={styles.winnerIconContainer}>
+              <Icon name={isTie ? 'equal' : 'trophy'} size={48} color="#FFFFFF" />
+            </View>
             <Text style={styles.winnerTitle}>
-              {isTie ? "It's a Tie!" : 'Winner!'}
+              {isTie ? 'It\'s a Tie' : 'Winner'}
             </Text>
-
-            {isTie ? (
-              winners.map((winner, index) => (
-                <Text key={index} style={styles.winnerName}>
-                  {winner.name}
-                </Text>
-              ))
-            ) : (
-              <Text style={styles.winnerName}>{winners[0]?.name}</Text>
-            )}
-
-            <View style={styles.votesBadge}>
-              <Text style={styles.votesText}>
-                {maxVotes} {maxVotes === 1 ? 'Vote' : 'Votes'}
+            <View style={styles.winnerNamesContainer}>
+              {isTie ? (
+                winners.map((winner, index) => (
+                  <View key={index} style={styles.winnerNameRow}>
+                    <View style={styles.winnerDot} />
+                    <Text style={styles.winnerNameText}>{winner.name}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.winnerNameText}>{winners[0]?.name}</Text>
+              )}
+            </View>
+            <View style={styles.winnerVotesBadge}>
+              <Icon name="heart" size={16} color="#FFFFFF" />
+              <Text style={styles.winnerVotesText}>
+                {maxVoteCount} {maxVoteCount === 1 ? 'Vote' : 'Votes'}
               </Text>
             </View>
           </LinearGradient>
-        )}
+        ) : election.candidates.length > 0 && totalVotes === 0 ? (
+          <View style={styles.noVotesCard}>
+            <View style={styles.noVotesIconContainer}>
+              <Icon name="clock-outline" size={40} color="#FF9800" />
+            </View>
+            <Text style={styles.noVotesTitle}>No Votes Cast Yet</Text>
+            <Text style={styles.noVotesSubtitle}>Results will appear once voting begins</Text>
+          </View>
+        ) : null}
 
-        {/* Section Title */}
-        <Text style={styles.sectionTitle}>Detailed Results</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Candidate Rankings</Text>
+          <View style={styles.sectionBadge}>
+            <Text style={styles.sectionBadgeText}>{election.candidates.length}</Text>
+          </View>
+        </View>
 
-        {/* Candidates List */}
         {election.candidates.length === 0 ? (
           <View style={styles.emptyState}>
             <Icon name="account-off" size={80} color="#CCCCCC" />
             <Text style={styles.emptyTitle}>No Candidates</Text>
-            <Text style={styles.emptySubtitle}>
-              No candidates have been added to this election yet
-            </Text>
+            <Text style={styles.emptySubtitle}>No candidates have been added to this election yet</Text>
           </View>
         ) : (
           <FlatList
@@ -214,66 +236,82 @@ export default function ElectionResultScreen({ route, navigation }) {
           />
         )}
 
-        {/* Statistics Card */}
         {election.candidates.length > 0 && (
           <View style={styles.statsCard}>
-            <View style={styles.statsHeader}>
+            <View style={styles.statsHeaderRow}>
               <View style={styles.statsIconContainer}>
-                <Icon name="chart-line" size={24} color="#6A1B9A" />
+                <Icon name="chart-line" size={22} color="#6A1B9A" />
               </View>
-              <Text style={styles.statsTitle}>Statistics</Text>
+              <Text style={styles.statsTitle}>Election Statistics</Text>
             </View>
 
-            <View style={styles.statRow}>
-              <Icon name="vote" size={20} color="#666666" />
-              <Text style={styles.statLabel}>Total Votes Cast</Text>
-              <Text style={styles.statValue}>{election.currentVoteCount}</Text>
-            </View>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <View style={[styles.statIconCircle, { backgroundColor: '#6A1B9A15' }]}>
+                  <Icon name="vote" size={20} color="#6A1B9A" />
+                </View>
+                <Text style={styles.statValue}>{election.currentVoteCount}</Text>
+                <Text style={styles.statLabel}>Total Votes</Text>
+              </View>
 
-            <View style={styles.divider} />
+              <View style={styles.statItem}>
+                <View style={[styles.statIconCircle, { backgroundColor: '#FF6F0015' }]}>
+                  <Icon name="account-multiple" size={20} color="#FF6F00" />
+                </View>
+                <Text style={styles.statValue}>{election.candidates.length}</Text>
+                <Text style={styles.statLabel}>Candidates</Text>
+              </View>
 
-            <View style={styles.statRow}>
-              <Icon name="account-group" size={20} color="#666666" />
-              <Text style={styles.statLabel}>Total Candidates</Text>
-              <Text style={styles.statValue}>{election.candidates.length}</Text>
-            </View>
+              <View style={styles.statItem}>
+                <View style={[styles.statIconCircle, { backgroundColor: '#4CAF5015' }]}>
+                  <Icon name="poll" size={20} color="#4CAF50" />
+                </View>
+                <Text style={styles.statValue}>
+                  {election.maxVotes > 0
+                    ? ((election.currentVoteCount / election.maxVotes) * 100).toFixed(0)
+                    : 0}%
+                </Text>
+                <Text style={styles.statLabel}>Turnout</Text>
+              </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.statRow}>
-              <Icon name="poll" size={20} color="#666666" />
-              <Text style={styles.statLabel}>Voter Turnout</Text>
-              <Text style={styles.statValue}>
-                {election.maxVotes > 0
-                  ? ((election.currentVoteCount / election.maxVotes) * 100).toFixed(1)
-                  : 0}
-                %
-              </Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.statRow}>
-              <Icon name="chart-bar" size={20} color="#666666" />
-              <Text style={styles.statLabel}>Avg. Votes per Candidate</Text>
-              <Text style={styles.statValue}>
-                {election.candidates.length > 0
-                  ? (election.currentVoteCount / election.candidates.length).toFixed(1)
-                  : 0}
-              </Text>
+              <View style={styles.statItem}>
+                <View style={[styles.statIconCircle, { backgroundColor: '#2196F315' }]}>
+                  <Icon name="chart-bar" size={20} color="#2196F3" />
+                </View>
+                <Text style={styles.statValue}>
+                  {election.candidates.length > 0
+                    ? (election.currentVoteCount / election.candidates.length).toFixed(1)
+                    : 0}
+                </Text>
+                <Text style={styles.statLabel}>Avg/Candidate</Text>
+              </View>
             </View>
           </View>
         )}
+
+        <View style={{ height: 20 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F5F5F5',
   },
+  loadingText: { marginTop: 16, fontSize: 16, color: '#666666' },
+  backBtn: {
+    marginTop: 20,
+    backgroundColor: '#6A1B9A',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  backBtnText: { color: '#FFFFFF', fontWeight: 'bold' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -282,110 +320,153 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  electionCard: {
+  backButton: { padding: 4 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
+  content: { flex: 1, padding: 16 },
+  electionInfoCard: {
     padding: 20,
     borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    marginBottom: 16,
     elevation: 4,
   },
-  electionHeader: {
+  electionIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    gap: 12,
   },
+  electionIconContainer: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    padding: 10,
+    marginRight: 12,
+  },
+  electionTitleContainer: { flex: 1 },
   electionTitle: {
-    flex: 1,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    marginBottom: 4,
   },
-  badgesRow: {
+  electionSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  infoBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
   },
   infoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
+    borderRadius: 16,
+    gap: 4,
   },
-  badgeText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dateText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-  },
+  badgeText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 12 },
   winnerCard: {
     padding: 24,
     borderRadius: 20,
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 8,
+    marginBottom: 16,
+    elevation: 6,
+  },
+  winnerIconContainer: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 50,
+    padding: 16,
+    marginBottom: 12,
   },
   winnerTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 16,
+    marginBottom: 12,
   },
-  winnerName: {
-    fontSize: 22,
+  winnerNamesContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  winnerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  winnerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    marginRight: 8,
+  },
+  winnerNameText: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginTop: 8,
-    textAlign: 'center',
   },
-  votesBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  winnerVotesBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    marginTop: 12,
+    gap: 6,
   },
-  votesText: {
-    fontSize: 18,
+  winnerVotesText: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  noVotesCard: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFE082',
+  },
+  noVotesIconContainer: {
+    backgroundColor: '#FFE082',
+    borderRadius: 50,
+    padding: 12,
+    marginBottom: 12,
+  },
+  noVotesTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#F57C00',
+    marginBottom: 4,
+  },
+  noVotesSubtitle: {
+    fontSize: 13,
+    color: '#FB8C00',
+    textAlign: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#424242',
-    marginBottom: 12,
+  },
+  sectionBadge: {
+    backgroundColor: '#6A1B9A',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  sectionBadgeText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   candidateCard: {
     backgroundColor: '#FFFFFF',
@@ -394,17 +475,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
     borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 2,
   },
-  winnerCard: {
-    borderColor: '#FF6F00',
-    backgroundColor: '#FF6F0005',
-    shadowColor: '#FF6F00',
-    shadowOpacity: 0.3,
+  winnerCandidateCard: {
+    borderColor: '#FFD700',
+    backgroundColor: '#FFFBF0',
     elevation: 4,
   },
   candidateHeader: {
@@ -412,50 +487,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  positionBadge: {
+    backgroundColor: '#6A1B9A',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  positionText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  winnerPositionText: {
+    color: '#FFFFFF',
+  },
   candidateAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   candidateInitial: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  candidateInfo: {
-    flex: 1,
-  },
-  positionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  candidateInfo: { flex: 1 },
+  candidateName: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#333333',
     marginBottom: 4,
   },
-  positionBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: 8,
+  winnerName: {
+    color: '#F57C00',
   },
-  positionText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  candidateName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  statsRow: {
+  qualificationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    marginBottom: 4,
   },
-  statsText: {
-    fontSize: 14,
+  qualification: {
+    fontSize: 11,
     color: '#666666',
+    fontStyle: 'italic',
+  },
+  voteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  voteText: {
+    fontSize: 13,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  winnerVoteText: {
+    color: '#F57C00',
+    fontWeight: 'bold',
+  },
+  trophyContainer: {
+    marginLeft: 8,
   },
   progressBarContainer: {
     height: 8,
@@ -471,48 +569,56 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    marginTop: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginTop: 4,
     elevation: 2,
   },
-  statsHeader: {
+  statsHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
   },
   statsIconContainer: {
     backgroundColor: '#6A1B9A10',
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 8,
     marginRight: 12,
   },
   statsTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
+    color: '#333333',
   },
-  statRow: {
+  statsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 12,
   },
-  statLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: '#666666',
+  statItem: {
+    width: '48%',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  statIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#6A1B9A',
+    color: '#333333',
+    marginBottom: 2,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
+  statLabel: {
+    fontSize: 12,
+    color: '#666666',
+    textAlign: 'center',
   },
   emptyState: {
     backgroundColor: '#FAFAFA',

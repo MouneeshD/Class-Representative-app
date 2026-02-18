@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import DataStore from '../../utils/dataStore.js';
+import DataStore from '../utils/dataStore.js';
 
 export default function RegisterScreen({ route, navigation }) {
   const { role } = route.params;
@@ -24,13 +25,14 @@ export default function RegisterScreen({ route, navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isStudent = role === 'student';
   const colors = isStudent
     ? ['#6A1B9A', '#9C27B0']
     : ['#FF6F00', '#FF8F00'];
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (
       !fullName.trim() ||
       !regNo.trim() ||
@@ -58,26 +60,34 @@ export default function RegisterScreen({ route, navigation }) {
       return;
     }
 
-    const success = DataStore.register({
-      regNo: regNo.trim(),
-      password: password.trim(),
-      role,
-      fullName: fullName.trim(),
-      email: email.trim(),
-      department: department.trim(),
-      year: isStudent ? year : null,
-    });
+    setLoading(true);
 
-    if (success) {
-      Alert.alert('Success', 'Registration successful! Please login.');
-      navigation.goBack();
-    } else {
-      Alert.alert(
-        'Error',
-        isStudent
-          ? 'Register number already exists'
-          : 'Faculty ID already exists'
-      );
+    try {
+      const success = await DataStore.register({
+        regNo: regNo.trim(),
+        password: password.trim(),
+        role,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        department: department.trim(),
+        year: isStudent ? year : null,
+      });
+
+      if (success) {
+        Alert.alert('Success', 'Registration successful! Please login.');
+        navigation.goBack();
+      } else {
+        Alert.alert(
+          'Error',
+          isStudent
+            ? 'Register number already exists'
+            : 'Faculty ID already exists'
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,7 +112,6 @@ export default function RegisterScreen({ route, navigation }) {
         <Text style={styles.subtitle}>Fill in your details to register</Text>
 
         <View style={styles.formCard}>
-          {/* Full Name */}
           <View style={styles.inputContainer}>
             <Icon name="account" size={24} color={colors[0]} />
             <TextInput
@@ -110,10 +119,10 @@ export default function RegisterScreen({ route, navigation }) {
               placeholder="Full Name"
               value={fullName}
               onChangeText={setFullName}
+              editable={!loading}
             />
           </View>
 
-          {/* Register Number / Faculty ID */}
           <View style={styles.inputContainer}>
             <Icon name="badge-account" size={24} color={colors[0]} />
             <TextInput
@@ -122,10 +131,10 @@ export default function RegisterScreen({ route, navigation }) {
               value={regNo}
               onChangeText={setRegNo}
               autoCapitalize="none"
+              editable={!loading}
             />
           </View>
 
-          {/* Email */}
           <View style={styles.inputContainer}>
             <Icon name="email" size={24} color={colors[0]} />
             <TextInput
@@ -135,10 +144,10 @@ export default function RegisterScreen({ route, navigation }) {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={!loading}
             />
           </View>
 
-          {/* Department */}
           <View style={styles.inputContainer}>
             <Icon name="school" size={24} color={colors[0]} />
             <TextInput
@@ -146,10 +155,10 @@ export default function RegisterScreen({ route, navigation }) {
               placeholder="Department"
               value={department}
               onChangeText={setDepartment}
+              editable={!loading}
             />
           </View>
 
-          {/* Year (Students only) */}
           {isStudent && (
             <View style={styles.inputContainer}>
               <Icon name="calendar" size={24} color={colors[0]} />
@@ -157,6 +166,7 @@ export default function RegisterScreen({ route, navigation }) {
                 selectedValue={year}
                 style={styles.picker}
                 onValueChange={(itemValue) => setYear(itemValue)}
+                enabled={!loading}
               >
                 <Picker.Item label="1st Year" value="1st Year" />
                 <Picker.Item label="2nd Year" value="2nd Year" />
@@ -166,7 +176,6 @@ export default function RegisterScreen({ route, navigation }) {
             </View>
           )}
 
-          {/* Password */}
           <View style={styles.inputContainer}>
             <Icon name="lock" size={24} color={colors[0]} />
             <TextInput
@@ -175,6 +184,7 @@ export default function RegisterScreen({ route, navigation }) {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              editable={!loading}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
               <Icon
@@ -185,7 +195,6 @@ export default function RegisterScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Confirm Password */}
           <View style={styles.inputContainer}>
             <Icon name="lock-check" size={24} color={colors[0]} />
             <TextInput
@@ -194,6 +203,7 @@ export default function RegisterScreen({ route, navigation }) {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
+              editable={!loading}
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -206,15 +216,19 @@ export default function RegisterScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={handleRegister}>
+          <TouchableOpacity onPress={handleRegister} disabled={loading}>
             <LinearGradient colors={colors} style={styles.registerButton}>
-              <Text style={styles.registerButtonText}>Register</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.registerButtonText}>Register</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={() => navigation.goBack()} disabled={loading}>
               <Text style={[styles.loginLink, { color: colors[0] }]}>
                 Login
               </Text>

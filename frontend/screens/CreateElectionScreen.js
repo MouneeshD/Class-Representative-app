@@ -7,16 +7,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
-import DataStore from '../../utils/dataStore.js';
+import DataStore from '../utils/dataStore.js';
 
 export default function CreateElectionScreen({ navigation }) {
   const [title, setTitle] = useState('');
   const [maxVotes, setMaxVotes] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleCreateElection = () => {
+  const handleCreateElection = async () => {
     if (!title.trim() || !maxVotes.trim()) {
       Alert.alert('Error', 'Please fill all fields');
       return;
@@ -28,20 +30,33 @@ export default function CreateElectionScreen({ navigation }) {
       return;
     }
 
-    const election = DataStore.createElection(title.trim(), votes);
+    setLoading(true);
 
-    Alert.alert(
-      'Election Created!',
-      `Election ID: ${election.id}\n\nShare this ID with students`,
-      [
-        {
-          text: 'Add Candidates',
-          onPress: () => {
-            navigation.replace('AddCandidates', { election });
-          },
-        },
-      ]
-    );
+    try {
+      const election = await DataStore.createElection(title.trim(), votes);
+
+      if (election) {
+        Alert.alert(
+          'Election Created',
+          `Election ID: ${election.id}\n\nShare this ID with students`,
+          [
+            {
+              text: 'Add Candidates',
+              onPress: () => {
+                // Pass only electionId, not full object
+                navigation.replace('AddCandidates', { electionId: election.id });
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to create election');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to create election');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,12 +95,9 @@ export default function CreateElectionScreen({ navigation }) {
               value={title}
               onChangeText={setTitle}
               placeholderTextColor="#999999"
+              editable={!loading}
             />
           </View>
-
-          <Text style={styles.helperText}>
-            e.g., Class Representative 2024
-          </Text>
 
           <View style={styles.inputContainer}>
             <Icon name="account-group" size={24} color="#FF6F00" />
@@ -96,20 +108,23 @@ export default function CreateElectionScreen({ navigation }) {
               onChangeText={setMaxVotes}
               keyboardType="number-pad"
               placeholderTextColor="#999999"
+              editable={!loading}
             />
           </View>
 
-          <Text style={styles.helperText}>
-            Number of students who can vote
-          </Text>
-
-          <TouchableOpacity onPress={handleCreateElection}>
+          <TouchableOpacity onPress={handleCreateElection} disabled={loading}>
             <LinearGradient
               colors={['#FF6F00', '#FF8F00']}
               style={styles.createButton}
             >
-              <Icon name="plus-circle" size={24} color="#FFFFFF" />
-              <Text style={styles.createButtonText}>Create Election</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Icon name="plus-circle" size={24} color="#FFFFFF" />
+                  <Text style={styles.createButtonText}>Create Election</Text>
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -119,10 +134,7 @@ export default function CreateElectionScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -131,59 +143,27 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
   },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-  },
+  backButton: { padding: 4 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
+  content: { flex: 1, padding: 24 },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
     borderRadius: 16,
     marginBottom: 32,
-    shadowColor: '#FF6F00',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
     elevation: 8,
   },
-  infoTextContainer: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  infoTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  infoSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 4,
-  },
+  infoTextContainer: { flex: 1, marginLeft: 16 },
+  infoTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
+  infoSubtitle: { fontSize: 14, color: 'rgba(255, 255, 255, 0.7)', marginTop: 4 },
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 2,
   },
-  formLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
+  formLabel: { fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -201,12 +181,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000000',
   },
-  helperText: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 20,
-    marginLeft: 4,
-  },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -215,15 +189,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 12,
     gap: 8,
-    shadowColor: '#FF6F00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 4,
   },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  createButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
 });

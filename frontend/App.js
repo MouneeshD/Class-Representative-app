@@ -1,16 +1,16 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import SplashScreen from './frontend/screens/SplashScreen';
-import LoginSelectionScreen from './frontend/screens/LoginSelectionScreen';
-import AuthScreen from './frontend/screens/AuthScreen';
-import RegisterScreen from './frontend/screens/RegisterScreen';
-import StudentDashboard from './frontend/screens/StudentDashboard';
-import FacultyDashboard from './frontend/screens/FacultyDashboard';
-import CreateElectionScreen from './frontend/screens/CreateElectionScreen';
-import AddCandidatesScreen from './frontend/screens/AddCandidatesScreen';
-import VotingScreen from './frontend/screens/VotingScreen';
-import ElectionResultScreen from './frontend/screens/ElectionResultScreen';
+import SplashScreen from './screens/SplashScreen';
+import LoginSelectionScreen from './screens/LoginSelectionScreen';
+import AuthScreen from './screens/AuthScreen';
+import RegisterScreen from './screens/RegisterScreen';
+import StudentDashboard from './screens/StudentDashboard';
+import FacultyDashboard from './screens/FacultyDashboard';
+import CreateElectionScreen from './screens/CreateElectionScreen';
+import AddCandidatesScreen from './screens/AddCandidatesScreen';
+import VotingScreen from './screens/VotingScreen';
+import ElectionResultScreen from './screens/ElectionResultScreen';
 
 const Stack = createNativeStackNavigator();
 
