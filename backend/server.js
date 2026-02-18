@@ -10,7 +10,7 @@ app.use(express.json());
 const pool = mysql.createPool({
   host: '127.0.0.1',
   user: 'root',
-  password: 'mouneesh',   // put your real password if you have one
+  password: '',   // put your real password if you have one
   database: 'cr_voting_app',
   port: 3306,
   waitForConnections: true,
