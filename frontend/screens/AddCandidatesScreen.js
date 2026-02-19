@@ -455,29 +455,33 @@ export default function AddCandidatesScreen({ route, navigation }) {
             />
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setEditModalVisible(false)}
-                disabled={submitting}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={handleSaveEdit} disabled={submitting}>
-                <LinearGradient
-                  colors={['#FF6F00', '#FF8F00']}
-                  style={styles.modalSaveButton}
+              <View style={styles.modalCancelButtonContainer}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={() => setEditModalVisible(false)}
+                  disabled={submitting}
                 >
-                  {submitting ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <>
-                      <Icon name="content-save" size={20} color="#FFFFFF" />
-                      <Text style={styles.modalSaveText}>Save</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalSaveButtonContainer}>
+                <TouchableOpacity onPress={handleSaveEdit} disabled={submitting}>
+                  <LinearGradient
+                    colors={['#FF6F00', '#FF8F00']}
+                    style={styles.modalSaveButton}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Icon name="content-save" size={20} color="#FFFFFF" />
+                        <Text style={styles.modalSaveText}>Save</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -594,23 +598,40 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#333333' },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 12 },
-  modalCancelButton: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalCancelText: { fontSize: 16, fontWeight: 'bold', color: '#666666' },
-  modalSaveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  modalSaveText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+ modalButtons: { 
+  flexDirection: 'row', 
+  gap: 12, 
+  marginTop: 8 
+},
+modalCancelButtonContainer: {
+  flex: 1,
+},
+modalCancelButton: {
+  backgroundColor: '#F5F5F5',
+  paddingVertical: 14,
+  borderRadius: 12,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+modalCancelText: { 
+  fontSize: 16, 
+  fontWeight: 'bold', 
+  color: '#666666' 
+},
+modalSaveButtonContainer: {
+  flex: 1,
+},
+modalSaveButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingVertical: 14,
+  borderRadius: 12,
+  gap: 8,
+},
+modalSaveText: { 
+  color: '#FFFFFF', 
+  fontSize: 16, 
+  fontWeight: 'bold' 
+},
 });
