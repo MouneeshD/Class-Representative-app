@@ -1,7 +1,8 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://10.0.2.2:5000/api';
+const API_URL = 'http://10.0.2.2:5000/api'; // Android Emulator
+// const API_URL = 'http://localhost:5000/api'; // iOS Simulator
+//const API_URL = 'http://10.238.241.128:5000/api'; // Real Device
 
 class DataStore {
   constructor() {
@@ -9,40 +10,7 @@ class DataStore {
     this.currentUser = null;
     this.currentUserRegNo = null;
     this.currentUserRole = null;
-    this.token = null;
     this.studentJoinedElectionIds = [];
-  }
-
-  async loadToken() {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (token) {
-        this.token = token;
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      }
-    } catch (error) {
-      console.error('Load token error:', error);
-    }
-  }
-
-  async saveToken(token) {
-    try {
-      await AsyncStorage.setItem('authToken', token);
-      this.token = token;
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } catch (error) {
-      console.error('Save token error:', error);
-    }
-  }
-
-  async clearToken() {
-    try {
-      await AsyncStorage.removeItem('authToken');
-      this.token = null;
-      delete axios.defaults.headers.common['Authorization'];
-    } catch (error) {
-      console.error('Clear token error:', error);
-    }
   }
 
   async register({ regNo, password, role, fullName, email, department, year = null }) {
@@ -67,9 +35,6 @@ class DataStore {
         this.currentUserRegNo = response.data.user.regNo;
         this.currentUserRole = response.data.user.role;
         this.studentJoinedElectionIds = [];
-        
-        await this.saveToken(response.data.token);
-        
         return true;
       }
       return false;
@@ -79,13 +44,12 @@ class DataStore {
     }
   }
 
-  async logout() {
+  logout() {
     this.currentUser = null;
     this.currentUserRegNo = null;
     this.currentUserRole = null;
     this.elections = [];
     this.studentJoinedElectionIds = [];
-    await this.clearToken();
   }
 
   async refreshElections() {
@@ -96,6 +60,7 @@ class DataStore {
           this._transformElection(e)
         );
 
+        // Auto-add elections where current student has voted
         if (this.currentUserRole === 'student' && this.currentUserRegNo) {
           this.elections.forEach((election) => {
             const hasVoted = election.votedStudents.includes(
@@ -109,9 +74,6 @@ class DataStore {
       }
     } catch (error) {
       console.error('Refresh elections error:', error);
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        await this.logout();
-      }
     }
   }
 
@@ -137,7 +99,7 @@ class DataStore {
   async createElection(title, maxVotes) {
     try {
       const response = await axios.post(`${API_URL}/elections`, {
-        title, maxVotes,
+        title, maxVotes, createdBy: this.currentUser?.id,
       });
       if (response.data.success) {
         const election = this._transformElection(response.data.election);
@@ -148,6 +110,25 @@ class DataStore {
     } catch (error) {
       console.error('Create election error:', error);
       throw new Error('Failed to create election');
+    }
+  }
+
+  async addCandidateToElection(electionId, candidateName, description = null, qualification = null) {
+    try {
+      const response = await axios.post(`${API_URL}/candidates`, {
+        electionId, name: candidateName, description, qualification,
+      });
+      if (response.data.success) {
+        const election = this.elections.find((e) => e.id === electionId);
+        if (election) {
+          election.candidates.push(response.data.candidate);
+        }
+        return response.data.candidate;
+      }
+      return null;
+    } catch (error) {
+      console.error('Add candidate error:', error);
+      throw new Error('Failed to add candidate');
     }
   }
 
@@ -177,6 +158,7 @@ class DataStore {
 
       const response = await axios.post(`${API_URL}/vote`, {
         electionId,
+        voterRegNo: this.currentUser.regNo,
         candidateId,
       });
 
@@ -212,6 +194,22 @@ class DataStore {
     }
   }
 
+  // Add this method to your DataStore class
+
+async deleteElection(electionId) {
+  try {
+    const response = await axios.delete(`${API_URL}/elections/${electionId}`);
+    if (response.data.success) {
+      this.elections = this.elections.filter(e => e.id !== electionId);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Delete election error:', error);
+    throw new Error('Failed to delete election');
+  }
+}
+
   async toggleElectionResults(electionId) {
     try {
       const response = await axios.put(
@@ -228,20 +226,6 @@ class DataStore {
     } catch (error) {
       console.error('Toggle results error:', error);
       throw new Error('Failed to toggle results');
-    }
-  }
-
-  async deleteElection(electionId) {
-    try {
-      const response = await axios.delete(`${API_URL}/elections/${electionId}`);
-      if (response.data.success) {
-        this.elections = this.elections.filter(e => e.id !== electionId);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Delete election error:', error);
-      throw new Error('Failed to delete election');
     }
   }
 
@@ -275,6 +259,7 @@ class DataStore {
       isVotingClosed:
         Boolean(backendElection.is_closed) ||
         backendElection.current_vote_count >= backendElection.max_votes,
+      // Check by regNo not name
       hasStudentVoted(regNo) {
         if (!regNo) return false;
         return votedStudents.includes(regNo.toLowerCase().trim());
