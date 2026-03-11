@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
@@ -8,11 +9,11 @@ app.use(cors());
 app.use(express.json());
 
 const pool = mysql.createPool({
-  host: '127.0.0.1',
-  user: 'root',
-  password: 'mouneesh',   // put your real password if you have one
-  database: 'cr_voting_app',
-  port: 3306,
+  host:  process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password:process.env.DB_PASSWORD,   // put your real password if you have one
+  database: process.env.DB_NAME,
+  port: Number(process.env.DB_PORT),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -543,5 +544,5 @@ app.delete('/api/elections/:id', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
