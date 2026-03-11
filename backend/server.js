@@ -3,15 +3,18 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
+
 const pool = mysql.createPool({
-  host:  process.env.DB_HOST,
+  host: process.env.DB_HOST,
   user: process.env.DB_USER,
-  password:process.env.DB_PASSWORD,   // put your real password if you have one
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: Number(process.env.DB_PORT),
   waitForConnections: true,
@@ -19,7 +22,6 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-// Test Database Connection
 pool.getConnection()
   .then(connection => {
     console.log('✅ Connected to MySQL Database');
@@ -29,14 +31,47 @@ pool.getConnection()
     console.error('❌ Database connection failed:', err);
   });
 
+// ==================== JWT MIDDLEWARE ====================
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Access token required' 
+    });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Invalid or expired token' 
+      });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+const authenticateFaculty = (req, res, next) => {
+  if (req.user.role !== 'faculty') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Faculty access required' 
+    });
+  }
+  next();
+};
+
 // ==================== AUTH ROUTES ====================
 
-// Register User
 app.post('/api/register', async (req, res) => {
   try {
     const { regNo, fullName, email, department, year, password, role } = req.body;
 
-    // Check if user already exists
     const [existing] = await pool.query(
       'SELECT * FROM users WHERE reg_no = ?',
       [regNo]
@@ -49,10 +84,8 @@ app.post('/api/register', async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new user
     await pool.query(
       `INSERT INTO users (reg_no, full_name, email, department, year, password, role) 
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -72,7 +105,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Login User
 app.post('/api/login', async (req, res) => {
   try {
     const { regNo, password, role } = req.body;
@@ -90,8 +122,6 @@ app.post('/api/login', async (req, res) => {
     }
 
     const user = users[0];
-
-    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -101,8 +131,19 @@ app.post('/api/login', async (req, res) => {
       });
     }
 
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        regNo: user.reg_no, 
+        role: user.role 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     res.json({ 
-      success: true, 
+      success: true,
+      token,
       user: {
         id: user.id,
         regNo: user.reg_no,
@@ -124,12 +165,11 @@ app.post('/api/login', async (req, res) => {
 
 // ==================== ELECTION ROUTES ====================
 
-// Create Election
-app.post('/api/elections', async (req, res) => {
+app.post('/api/elections', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const { title, maxVotes, createdBy } = req.body;
+    const { title, maxVotes } = req.body;
+    const createdBy = req.user.id;
 
-    // Generate 4-digit election ID
     let electionId;
     let exists = true;
     
@@ -166,8 +206,7 @@ app.post('/api/elections', async (req, res) => {
   }
 });
 
-// Get All Elections
-app.get('/api/elections', async (req, res) => {
+app.get('/api/elections', authenticateToken, async (req, res) => {
   try {
     const [elections] = await pool.query(`
       SELECT e.*, 
@@ -176,7 +215,6 @@ app.get('/api/elections', async (req, res) => {
       ORDER BY e.created_at DESC
     `);
 
-    // Get candidates for each election
     for (let election of elections) {
       const [candidates] = await pool.query(
         'SELECT * FROM candidates WHERE election_id = ? ORDER BY vote_count DESC',
@@ -206,8 +244,7 @@ app.get('/api/elections', async (req, res) => {
   }
 });
 
-// Get Election by ID
-app.get('/api/elections/:id', async (req, res) => {
+app.get('/api/elections/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -252,8 +289,7 @@ app.get('/api/elections/:id', async (req, res) => {
   }
 });
 
-// Toggle Results Published
-app.put('/api/elections/:id/toggle-results', async (req, res) => {
+app.put('/api/elections/:id/toggle-results', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -289,158 +325,7 @@ app.put('/api/elections/:id/toggle-results', async (req, res) => {
   }
 });
 
-// ==================== CANDIDATE ROUTES ====================
-
-// Add Candidate
-app.post('/api/candidates', async (req, res) => {
-  try {
-    const { electionId, name, description, qualification } = req.body;
-
-    // Get current candidate count
-    const [candidates] = await pool.query(
-      'SELECT COUNT(*) as count FROM candidates WHERE election_id = ?',
-      [electionId]
-    );
-
-    const candidateId = `${electionId}_${candidates[0].count + 1}`;
-
-    await pool.query(
-      `INSERT INTO candidates (id, election_id, name, description, qualification) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [candidateId, electionId, name, description, qualification]
-    );
-
-    const [newCandidate] = await pool.query(
-      'SELECT * FROM candidates WHERE id = ?',
-      [candidateId]
-    );
-
-    res.json({ 
-      success: true, 
-      candidate: newCandidate[0] 
-    });
-  } catch (error) {
-    console.error('Add candidate error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  }
-});
-
-// ==================== VOTING ROUTES ====================
-
-// Cast Vote
-app.post('/api/vote', async (req, res) => {
-  const connection = await pool.getConnection();
-  
-  try {
-    await connection.beginTransaction();
-
-    const { electionId, voterRegNo, candidateId } = req.body;
-
-    // Check if already voted
-    const [existingVotes] = await connection.query(
-      'SELECT * FROM votes WHERE election_id = ? AND voter_reg_no = ?',
-      [electionId, voterRegNo]
-    );
-
-    if (existingVotes.length > 0) {
-      await connection.rollback();
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You have already voted in this election' 
-      });
-    }
-
-    // Check if voting is closed
-    const [elections] = await connection.query(
-      'SELECT * FROM elections WHERE id = ?',
-      [electionId]
-    );
-
-    if (elections.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Election not found' 
-      });
-    }
-
-    const election = elections[0];
-
-    if (election.current_vote_count >= election.max_votes) {
-      await connection.rollback();
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Voting is closed for this election' 
-      });
-    }
-
-    // Record vote
-    await connection.query(
-      `INSERT INTO votes (election_id, voter_reg_no, candidate_id) 
-       VALUES (?, ?, ?)`,
-      [electionId, voterRegNo, candidateId]
-    );
-
-    // Increment candidate vote count
-    await connection.query(
-      'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
-      [candidateId]
-    );
-
-    // Increment election vote count
-    await connection.query(
-      'UPDATE elections SET current_vote_count = current_vote_count + 1 WHERE id = ?',
-      [electionId]
-    );
-
-    await connection.commit();
-
-    res.json({ 
-      success: true, 
-      message: 'Vote recorded successfully' 
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Vote error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  } finally {
-    connection.release();
-  }
-});
-
-// Check if User Voted
-app.get('/api/elections/:electionId/voted/:regNo', async (req, res) => {
-  try {
-    const { electionId, regNo } = req.params;
-
-    const [votes] = await pool.query(
-      'SELECT * FROM votes WHERE election_id = ? AND voter_reg_no = ?',
-      [electionId, regNo]
-    );
-
-    res.json({ 
-      success: true, 
-      hasVoted: votes.length > 0 
-    });
-  } catch (error) {
-    console.error('Check vote error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  }
-});
-
-// ==================== CLOSE ELECTION ====================
-
-// Close Election (Faculty only)
-app.put('/api/elections/:id/close', async (req, res) => {
+app.put('/api/elections/:id/close', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -476,8 +361,63 @@ app.put('/api/elections/:id/close', async (req, res) => {
   }
 });
 
-// Update Candidate
-app.put('/api/candidates/:id', async (req, res) => {
+app.delete('/api/elections/:id', authenticateToken, authenticateFaculty, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await pool.query('DELETE FROM elections WHERE id = ?', [id]);
+
+    res.json({ 
+      success: true, 
+      message: 'Election deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Delete election error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+// ==================== CANDIDATE ROUTES ====================
+
+app.post('/api/candidates', authenticateToken, authenticateFaculty, async (req, res) => {
+  try {
+    const { electionId, name, description, qualification } = req.body;
+
+    const [candidates] = await pool.query(
+      'SELECT COUNT(*) as count FROM candidates WHERE election_id = ?',
+      [electionId]
+    );
+
+    const candidateId = `${electionId}_${candidates[0].count + 1}`;
+
+    await pool.query(
+      `INSERT INTO candidates (id, election_id, name, description, qualification) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [candidateId, electionId, name, description, qualification]
+    );
+
+    const [newCandidate] = await pool.query(
+      'SELECT * FROM candidates WHERE id = ?',
+      [candidateId]
+    );
+
+    res.json({ 
+      success: true, 
+      candidate: newCandidate[0] 
+    });
+  } catch (error) {
+    console.error('Add candidate error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+app.put('/api/candidates/:id', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, qualification, description } = req.body;
@@ -500,8 +440,7 @@ app.put('/api/candidates/:id', async (req, res) => {
   }
 });
 
-// Delete Candidate
-app.delete('/api/candidates/:id', async (req, res) => {
+app.delete('/api/candidates/:id', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -520,19 +459,110 @@ app.delete('/api/candidates/:id', async (req, res) => {
   }
 });
 
-// Delete Election (CASCADE will delete candidates and votes)
-app.delete('/api/elections/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
+// ==================== VOTING ROUTES ====================
 
-    await pool.query('DELETE FROM elections WHERE id = ?', [id]);
+app.post('/api/vote', authenticateToken, async (req, res) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    const { electionId, candidateId } = req.body;
+    const voterRegNo = req.user.regNo;
+
+    if (req.user.role !== 'student') {
+      await connection.rollback();
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Only students can vote' 
+      });
+    }
+
+    const [existingVotes] = await connection.query(
+      'SELECT * FROM votes WHERE election_id = ? AND voter_reg_no = ?',
+      [electionId, voterRegNo]
+    );
+
+    if (existingVotes.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You have already voted in this election' 
+      });
+    }
+
+    const [elections] = await connection.query(
+      'SELECT * FROM elections WHERE id = ?',
+      [electionId]
+    );
+
+    if (elections.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Election not found' 
+      });
+    }
+
+    const election = elections[0];
+
+    if (election.current_vote_count >= election.max_votes || election.is_closed) {
+      await connection.rollback();
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Voting is closed for this election' 
+      });
+    }
+
+    await connection.query(
+      `INSERT INTO votes (election_id, voter_reg_no, candidate_id) 
+       VALUES (?, ?, ?)`,
+      [electionId, voterRegNo, candidateId]
+    );
+
+    await connection.query(
+      'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
+      [candidateId]
+    );
+
+    await connection.query(
+      'UPDATE elections SET current_vote_count = current_vote_count + 1 WHERE id = ?',
+      [electionId]
+    );
+
+    await connection.commit();
 
     res.json({ 
       success: true, 
-      message: 'Election deleted successfully' 
+      message: 'Vote recorded successfully' 
     });
   } catch (error) {
-    console.error('Delete election error:', error);
+    await connection.rollback();
+    console.error('Vote error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+app.get('/api/elections/:electionId/voted/:regNo', authenticateToken, async (req, res) => {
+  try {
+    const { electionId, regNo } = req.params;
+
+    const [votes] = await pool.query(
+      'SELECT * FROM votes WHERE election_id = ? AND voter_reg_no = ?',
+      [electionId, regNo]
+    );
+
+    res.json({ 
+      success: true, 
+      hasVoted: votes.length > 0 
+    });
+  } catch (error) {
+    console.error('Check vote error:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Server error' 
@@ -545,4 +575,5 @@ app.delete('/api/elections/:id', async (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`JWT Authentication enabled`);
 });
