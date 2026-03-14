@@ -1,63 +1,88 @@
 require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2/promise');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const User = require('./models/User');
+const Election = require('./models/Election');
+const Candidate = require('./models/Candidate');
+const Vote = require('./models/Vote');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const pool = mysql.createPool({
-  host: '127.0.0.1',
-  user: 'root',
-  password: 'mouneesh',   // put your real password if you have one
-  database: 'cr_voting_app',
-  port: 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
-// Test Database Connection
-pool.getConnection()
-  .then(connection => {
-    console.log('✅ Connected to MySQL Database');
-    connection.release();
-  })
-  .catch(err => {
-    console.error('❌ Database connection failed:', err);
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/cr_voting_app')
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => console.error('❌ MongoDB connection failed:', err));
+
+// ==================== JWT MIDDLEWARE ====================
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Access token required' 
+    });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Invalid or expired token' 
+      });
+    }
+    req.user = user;
+    next();
   });
+};
+
+const authenticateFaculty = (req, res, next) => {
+  if (req.user.role !== 'faculty') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Faculty access required' 
+    });
+  }
+  next();
+};
 
 // ==================== AUTH ROUTES ====================
 
-// Register User
 app.post('/api/register', async (req, res) => {
   try {
     const { regNo, fullName, email, department, year, password, role } = req.body;
 
-    // Check if user already exists
-    const [existing] = await pool.query(
-      'SELECT * FROM users WHERE reg_no = ?',
-      [regNo]
-    );
-
-    if (existing.length > 0) {
+    const existing = await User.findOne({ regNo });
+    if (existing) {
       return res.status(400).json({ 
         success: false, 
         message: 'Register number already exists' 
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new user
-    await pool.query(
-      `INSERT INTO users (reg_no, full_name, email, department, year, password, role) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [regNo, fullName, email, department, year, hashedPassword, role]
-    );
+    const user = new User({
+      regNo,
+      fullName,
+      email,
+      department,
+      year,
+      password: hashedPassword,
+      role
+    });
+
+    await user.save();
 
     res.json({ 
       success: true, 
@@ -72,28 +97,19 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Login User
 app.post('/api/login', async (req, res) => {
   try {
     const { regNo, password, role } = req.body;
 
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE reg_no = ? AND role = ?',
-      [regNo, role]
-    );
-
-    if (users.length === 0) {
+    const user = await User.findOne({ regNo, role });
+    if (!user) {
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid credentials' 
       });
     }
 
-    const user = users[0];
-
-    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.status(401).json({ 
         success: false, 
@@ -101,12 +117,23 @@ app.post('/api/login', async (req, res) => {
       });
     }
 
+    const token = jwt.sign(
+      { 
+        id: user._id, 
+        regNo: user.regNo, 
+        role: user.role 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     res.json({ 
-      success: true, 
+      success: true,
+      token,
       user: {
-        id: user.id,
-        regNo: user.reg_no,
-        fullName: user.full_name,
+        id: user._id,
+        regNo: user.regNo,
+        fullName: user.fullName,
         email: user.email,
         department: user.department,
         year: user.year,
@@ -124,38 +151,39 @@ app.post('/api/login', async (req, res) => {
 
 // ==================== ELECTION ROUTES ====================
 
-// Create Election
-app.post('/api/elections', async (req, res) => {
+app.post('/api/elections', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const { title, maxVotes, createdBy } = req.body;
+    const { title, maxVotes } = req.body;
 
-    // Generate 4-digit election ID
     let electionId;
     let exists = true;
     
     while (exists) {
       electionId = (Math.floor(Math.random() * 9000) + 1000).toString();
-      const [rows] = await pool.query(
-        'SELECT id FROM elections WHERE id = ?',
-        [electionId]
-      );
-      exists = rows.length > 0;
+      exists = await Election.findOne({ electionId });
     }
 
-    await pool.query(
-      `INSERT INTO elections (id, title, max_votes, created_by) 
-       VALUES (?, ?, ?, ?)`,
-      [electionId, title, maxVotes, createdBy]
-    );
+    const election = new Election({
+      electionId,
+      title,
+      maxVotes,
+      createdBy: req.user.id
+    });
 
-    const [election] = await pool.query(
-      'SELECT * FROM elections WHERE id = ?',
-      [electionId]
-    );
+    await election.save();
 
     res.json({ 
       success: true, 
-      election: election[0] 
+      election: {
+        id: election.electionId,
+        title: election.title,
+        max_votes: election.maxVotes,
+        current_vote_count: election.currentVoteCount,
+        results_published: election.resultsPublished,
+        is_closed: election.isClosed,
+        created_by: election.createdBy,
+        created_at: election.createdAt
+      }
     });
   } catch (error) {
     console.error('Create election error:', error);
@@ -166,36 +194,41 @@ app.post('/api/elections', async (req, res) => {
   }
 });
 
-// Get All Elections
-app.get('/api/elections', async (req, res) => {
+app.get('/api/elections', authenticateToken, async (req, res) => {
   try {
-    const [elections] = await pool.query(`
-      SELECT e.*, 
-             (SELECT COUNT(*) FROM candidates WHERE election_id = e.id) as candidate_count
-      FROM elections e
-      ORDER BY e.created_at DESC
-    `);
+    const elections = await Election.find().sort({ createdAt: -1 });
 
-    // Get candidates for each election
-    for (let election of elections) {
-      const [candidates] = await pool.query(
-        'SELECT * FROM candidates WHERE election_id = ? ORDER BY vote_count DESC',
-        [election.id]
-      );
+    const electionsWithData = await Promise.all(elections.map(async (election) => {
+      const candidates = await Candidate.find({ electionId: election.electionId })
+        .sort({ voteCount: -1 });
       
-      const [votes] = await pool.query(
-        'SELECT voter_reg_no FROM votes WHERE election_id = ?',
-        [election.id]
-      );
+      const votes = await Vote.find({ electionId: election.electionId });
       
-      election.candidates = candidates;
-      election.votedStudents = votes.map(v => v.voter_reg_no);
-      election.isVotingClosed = election.current_vote_count >= election.max_votes;
-    }
+      return {
+        id: election.electionId,
+        title: election.title,
+        max_votes: election.maxVotes,
+        current_vote_count: election.currentVoteCount,
+        results_published: election.resultsPublished,
+        is_closed: election.isClosed,
+        created_by: election.createdBy,
+        created_at: election.createdAt,
+        candidates: candidates.map(c => ({
+          id: c.candidateId,
+          election_id: c.electionId,
+          name: c.name,
+          description: c.description,
+          qualification: c.qualification,
+          vote_count: c.voteCount
+        })),
+        votedStudents: votes.map(v => v.voterRegNo),
+        candidate_count: candidates.length
+      };
+    }));
 
     res.json({ 
       success: true, 
-      elections 
+      elections: electionsWithData
     });
   } catch (error) {
     console.error('Get elections error:', error);
@@ -206,42 +239,43 @@ app.get('/api/elections', async (req, res) => {
   }
 });
 
-// Get Election by ID
-app.get('/api/elections/:id', async (req, res) => {
+app.get('/api/elections/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
+    const election = await Election.findOne({ electionId: req.params.id });
 
-    const [elections] = await pool.query(
-      'SELECT * FROM elections WHERE id = ?',
-      [id]
-    );
-
-    if (elections.length === 0) {
+    if (!election) {
       return res.status(404).json({ 
         success: false, 
         message: 'Election not found' 
       });
     }
 
-    const election = elections[0];
-
-    const [candidates] = await pool.query(
-      'SELECT * FROM candidates WHERE election_id = ? ORDER BY vote_count DESC',
-      [id]
-    );
-
-    const [votes] = await pool.query(
-      'SELECT voter_reg_no FROM votes WHERE election_id = ?',
-      [id]
-    );
-
-    election.candidates = candidates;
-    election.votedStudents = votes.map(v => v.voter_reg_no);
-    election.isVotingClosed = election.current_vote_count >= election.max_votes;
+    const candidates = await Candidate.find({ electionId: election.electionId })
+      .sort({ voteCount: -1 });
+    
+    const votes = await Vote.find({ electionId: election.electionId });
 
     res.json({ 
       success: true, 
-      election 
+      election: {
+        id: election.electionId,
+        title: election.title,
+        max_votes: election.maxVotes,
+        current_vote_count: election.currentVoteCount,
+        results_published: election.resultsPublished,
+        is_closed: election.isClosed,
+        created_by: election.createdBy,
+        created_at: election.createdAt,
+        candidates: candidates.map(c => ({
+          id: c.candidateId,
+          election_id: c.electionId,
+          name: c.name,
+          description: c.description,
+          qualification: c.qualification,
+          vote_count: c.voteCount
+        })),
+        votedStudents: votes.map(v => v.voterRegNo)
+      }
     });
   } catch (error) {
     console.error('Get election error:', error);
@@ -252,33 +286,23 @@ app.get('/api/elections/:id', async (req, res) => {
   }
 });
 
-// Toggle Results Published
-app.put('/api/elections/:id/toggle-results', async (req, res) => {
+app.put('/api/elections/:id/toggle-results', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const { id } = req.params;
+    const election = await Election.findOne({ electionId: req.params.id });
 
-    const [elections] = await pool.query(
-      'SELECT results_published FROM elections WHERE id = ?',
-      [id]
-    );
-
-    if (elections.length === 0) {
+    if (!election) {
       return res.status(404).json({ 
         success: false, 
         message: 'Election not found' 
       });
     }
 
-    const newStatus = !elections[0].results_published;
-
-    await pool.query(
-      'UPDATE elections SET results_published = ? WHERE id = ?',
-      [newStatus, id]
-    );
+    election.resultsPublished = !election.resultsPublished;
+    await election.save();
 
     res.json({ 
       success: true, 
-      resultsPublished: newStatus 
+      resultsPublished: election.resultsPublished 
     });
   } catch (error) {
     console.error('Toggle results error:', error);
@@ -289,183 +313,23 @@ app.put('/api/elections/:id/toggle-results', async (req, res) => {
   }
 });
 
-// ==================== CANDIDATE ROUTES ====================
-
-// Add Candidate
-app.post('/api/candidates', async (req, res) => {
+app.put('/api/elections/:id/close', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const { electionId, name, description, qualification } = req.body;
+    const election = await Election.findOne({ electionId: req.params.id });
 
-    // Get current candidate count
-    const [candidates] = await pool.query(
-      'SELECT COUNT(*) as count FROM candidates WHERE election_id = ?',
-      [electionId]
-    );
-
-    const candidateId = `${electionId}_${candidates[0].count + 1}`;
-
-    await pool.query(
-      `INSERT INTO candidates (id, election_id, name, description, qualification) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [candidateId, electionId, name, description, qualification]
-    );
-
-    const [newCandidate] = await pool.query(
-      'SELECT * FROM candidates WHERE id = ?',
-      [candidateId]
-    );
-
-    res.json({ 
-      success: true, 
-      candidate: newCandidate[0] 
-    });
-  } catch (error) {
-    console.error('Add candidate error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  }
-});
-
-// ==================== VOTING ROUTES ====================
-
-// Cast Vote
-app.post('/api/vote', async (req, res) => {
-  const connection = await pool.getConnection();
-  
-  try {
-    await connection.beginTransaction();
-
-    const { electionId, voterRegNo, candidateId } = req.body;
-
-    // Check if already voted
-    const [existingVotes] = await connection.query(
-      'SELECT * FROM votes WHERE election_id = ? AND voter_reg_no = ?',
-      [electionId, voterRegNo]
-    );
-
-    if (existingVotes.length > 0) {
-      await connection.rollback();
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You have already voted in this election' 
-      });
-    }
-
-    // Check if voting is closed
-    const [elections] = await connection.query(
-      'SELECT * FROM elections WHERE id = ?',
-      [electionId]
-    );
-
-    if (elections.length === 0) {
-      await connection.rollback();
+    if (!election) {
       return res.status(404).json({ 
         success: false, 
         message: 'Election not found' 
       });
     }
 
-    const election = elections[0];
-
-    if (election.current_vote_count >= election.max_votes) {
-      await connection.rollback();
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Voting is closed for this election' 
-      });
-    }
-
-    // Record vote
-    await connection.query(
-      `INSERT INTO votes (election_id, voter_reg_no, candidate_id) 
-       VALUES (?, ?, ?)`,
-      [electionId, voterRegNo, candidateId]
-    );
-
-    // Increment candidate vote count
-    await connection.query(
-      'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
-      [candidateId]
-    );
-
-    // Increment election vote count
-    await connection.query(
-      'UPDATE elections SET current_vote_count = current_vote_count + 1 WHERE id = ?',
-      [electionId]
-    );
-
-    await connection.commit();
+    election.isClosed = !election.isClosed;
+    await election.save();
 
     res.json({ 
       success: true, 
-      message: 'Vote recorded successfully' 
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Vote error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  } finally {
-    connection.release();
-  }
-});
-
-// Check if User Voted
-app.get('/api/elections/:electionId/voted/:regNo', async (req, res) => {
-  try {
-    const { electionId, regNo } = req.params;
-
-    const [votes] = await pool.query(
-      'SELECT * FROM votes WHERE election_id = ? AND voter_reg_no = ?',
-      [electionId, regNo]
-    );
-
-    res.json({ 
-      success: true, 
-      hasVoted: votes.length > 0 
-    });
-  } catch (error) {
-    console.error('Check vote error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  }
-});
-
-// ==================== CLOSE ELECTION ====================
-
-// Close Election (Faculty only)
-app.put('/api/elections/:id/close', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const [elections] = await pool.query(
-      'SELECT is_closed FROM elections WHERE id = ?',
-      [id]
-    );
-
-    if (elections.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Election not found' 
-      });
-    }
-
-    const newStatus = !elections[0].is_closed;
-
-    await pool.query(
-      'UPDATE elections SET is_closed = ? WHERE id = ?',
-      [newStatus, id]
-    );
-
-    res.json({ 
-      success: true, 
-      isClosed: newStatus 
+      isClosed: election.isClosed 
     });
   } catch (error) {
     console.error('Close election error:', error);
@@ -476,56 +340,20 @@ app.put('/api/elections/:id/close', async (req, res) => {
   }
 });
 
-// Update Candidate
-app.put('/api/candidates/:id', async (req, res) => {
+app.delete('/api/elections/:id', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { name, qualification, description } = req.body;
+    const election = await Election.findOne({ electionId: req.params.id });
 
-    await pool.query(
-      'UPDATE candidates SET name = ?, qualification = ?, description = ? WHERE id = ?',
-      [name, qualification, description, id]
-    );
+    if (!election) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Election not found' 
+      });
+    }
 
-    res.json({ 
-      success: true, 
-      message: 'Candidate updated successfully' 
-    });
-  } catch (error) {
-    console.error('Update candidate error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  }
-});
-
-// Delete Candidate
-app.delete('/api/candidates/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await pool.query('DELETE FROM candidates WHERE id = ?', [id]);
-
-    res.json({ 
-      success: true, 
-      message: 'Candidate deleted successfully' 
-    });
-  } catch (error) {
-    console.error('Delete candidate error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
-  }
-});
-
-// Delete Election (CASCADE will delete candidates and votes)
-app.delete('/api/elections/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await pool.query('DELETE FROM elections WHERE id = ?', [id]);
+    await Candidate.deleteMany({ electionId: req.params.id });
+    await Vote.deleteMany({ electionId: req.params.id });
+    await Election.deleteOne({ electionId: req.params.id });
 
     res.json({ 
       success: true, 
@@ -540,9 +368,185 @@ app.delete('/api/elections/:id', async (req, res) => {
   }
 });
 
+// ==================== CANDIDATE ROUTES ====================
+
+app.post('/api/candidates', authenticateToken, authenticateFaculty, async (req, res) => {
+  try {
+    const { electionId, name, description, qualification } = req.body;
+
+    const count = await Candidate.countDocuments({ electionId });
+    const candidateId = `${electionId}_${count + 1}`;
+
+    const candidate = new Candidate({
+      candidateId,
+      electionId,
+      name,
+      description,
+      qualification
+    });
+
+    await candidate.save();
+
+    res.json({ 
+      success: true, 
+      candidate: {
+        id: candidate.candidateId,
+        election_id: candidate.electionId,
+        name: candidate.name,
+        description: candidate.description,
+        qualification: candidate.qualification,
+        vote_count: candidate.voteCount
+      }
+    });
+  } catch (error) {
+    console.error('Add candidate error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+app.put('/api/candidates/:id', authenticateToken, authenticateFaculty, async (req, res) => {
+  try {
+    const { name, qualification, description } = req.body;
+
+    const candidate = await Candidate.findOne({ candidateId: req.params.id });
+
+    if (!candidate) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Candidate not found' 
+      });
+    }
+
+    candidate.name = name;
+    candidate.qualification = qualification;
+    candidate.description = description;
+    await candidate.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Candidate updated successfully' 
+    });
+  } catch (error) {
+    console.error('Update candidate error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+app.delete('/api/candidates/:id', authenticateToken, authenticateFaculty, async (req, res) => {
+  try {
+    await Candidate.deleteOne({ candidateId: req.params.id });
+
+    res.json({ 
+      success: true, 
+      message: 'Candidate deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Delete candidate error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+// ==================== VOTING ROUTES ====================
+
+app.post('/api/vote', authenticateToken, async (req, res) => {
+  try {
+    const { electionId, candidateId } = req.body;
+    const voterRegNo = req.user.regNo;
+
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Only students can vote' 
+      });
+    }
+
+    const existingVote = await Vote.findOne({ electionId, voterRegNo });
+    if (existingVote) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You have already voted in this election' 
+      });
+    }
+
+    const election = await Election.findOne({ electionId });
+    if (!election) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Election not found' 
+      });
+    }
+
+    if (election.currentVoteCount >= election.maxVotes || election.isClosed) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Voting is closed for this election' 
+      });
+    }
+
+    const vote = new Vote({
+      electionId,
+      voterRegNo,
+      candidateId
+    });
+
+    await vote.save();
+
+    await Candidate.updateOne(
+      { candidateId },
+      { $inc: { voteCount: 1 } }
+    );
+
+    await Election.updateOne(
+      { electionId },
+      { $inc: { currentVoteCount: 1 } }
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Vote recorded successfully' 
+    });
+  } catch (error) {
+    console.error('Vote error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+app.get('/api/elections/:electionId/voted/:regNo', authenticateToken, async (req, res) => {
+  try {
+    const { electionId, regNo } = req.params;
+
+    const vote = await Vote.findOne({ electionId, voterRegNo: regNo });
+
+    res.json({ 
+      success: true, 
+      hasVoted: !!vote 
+    });
+  } catch (error) {
+    console.error('Check vote error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
 // ==================== START SERVER ====================
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🔐 JWT Authentication enabled`);
+  console.log(`📊 MongoDB Connected`);
 });
