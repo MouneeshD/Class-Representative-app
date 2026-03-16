@@ -2,7 +2,7 @@
 
 # dependencies
 node_modules/
-eas.json
+eas.jsonnpm 
 # Expo
 .expo/
 dist/

@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axiosInstance from './axiosInstance.js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://10.0.2.2:5000/api'; // Android Emulator
+// const API_URL = 'http://10.0.2.2:5000/api'; // Use axiosInstance
 // const API_URL = 'http://localhost:5000/api'; // iOS Simulator
 //const API_URL = 'http://10.238.241.128:5000/api'; // Real Device
 
@@ -15,7 +16,7 @@ class DataStore {
 
   async register({ regNo, password, role, fullName, email, department, year = null }) {
     try {
-      const response = await axios.post(`${API_URL}/register`, {
+      const response = await axiosInstance.post('register', {
         regNo, fullName, email, department, year, password, role,
       });
       return response.data.success;
@@ -27,13 +28,18 @@ class DataStore {
 
   async login(regNo, password, role) {
     try {
-      const response = await axios.post(`${API_URL}/login`, {
+      const response = await axiosInstance.post('login', {
         regNo, password, role,
       });
       if (response.data.success) {
-        this.currentUser = response.data.user;
+        const userData = {
+          ...response.data.user,
+          token: response.data.token
+        };
+        this.currentUser = userData;
         this.currentUserRegNo = response.data.user.regNo;
         this.currentUserRole = response.data.user.role;
+        await AsyncStorage.setItem('userToken', response.data.token);
         this.studentJoinedElectionIds = [];
         return true;
       }
@@ -44,17 +50,18 @@ class DataStore {
     }
   }
 
-  logout() {
+  async logout() {
     this.currentUser = null;
     this.currentUserRegNo = null;
     this.currentUserRole = null;
     this.elections = [];
     this.studentJoinedElectionIds = [];
+    await AsyncStorage.removeItem('userToken');
   }
 
   async refreshElections() {
     try {
-      const response = await axios.get(`${API_URL}/elections`);
+      const response = await axiosInstance.get('elections');
       if (response.data.success) {
         this.elections = response.data.elections.map((e) =>
           this._transformElection(e)
@@ -98,8 +105,8 @@ class DataStore {
 
   async createElection(title, maxVotes) {
     try {
-      const response = await axios.post(`${API_URL}/elections`, {
-        title, maxVotes, createdBy: this.currentUser?.id,
+      const response = await axiosInstance.post('elections', {
+        title, maxVotes
       });
       if (response.data.success) {
         const election = this._transformElection(response.data.election);
@@ -115,7 +122,7 @@ class DataStore {
 
   async addCandidateToElection(electionId, candidateName, description = null, qualification = null) {
     try {
-      const response = await axios.post(`${API_URL}/candidates`, {
+      const response = await axiosInstance.post('candidates', {
         electionId, name: candidateName, description, qualification,
       });
       if (response.data.success) {
@@ -134,7 +141,7 @@ class DataStore {
 
   async getElectionById(id) {
     try {
-      const response = await axios.get(`${API_URL}/elections/${id}`);
+      const response = await axiosInstance.get(`elections/${id}`);
       if (response.data.success) {
         const election = this._transformElection(response.data.election);
         const idx = this.elections.findIndex((e) => e.id === id);
@@ -156,7 +163,7 @@ class DataStore {
     try {
       if (!this.currentUser) throw new Error('User not logged in');
 
-      const response = await axios.post(`${API_URL}/vote`, {
+      const response = await axiosInstance.post('vote', {
         electionId,
         voterRegNo: this.currentUser.regNo,
         candidateId,
@@ -177,8 +184,8 @@ class DataStore {
 
   async closeElection(electionId) {
     try {
-      const response = await axios.put(
-        `${API_URL}/elections/${electionId}/close`
+      const response = await axiosInstance.put(
+        `elections/${electionId}/close`
       );
       if (response.data.success) {
         const election = this.elections.find((e) => e.id === electionId);
@@ -198,7 +205,7 @@ class DataStore {
 
 async deleteElection(electionId) {
   try {
-    const response = await axios.delete(`${API_URL}/elections/${electionId}`);
+    const response = await axiosInstance.delete(`elections/${electionId}`);
     if (response.data.success) {
       this.elections = this.elections.filter(e => e.id !== electionId);
       return true;
@@ -212,8 +219,8 @@ async deleteElection(electionId) {
 
   async toggleElectionResults(electionId) {
     try {
-      const response = await axios.put(
-        `${API_URL}/elections/${electionId}/toggle-results`
+      const response = await axiosInstance.put(
+        `elections/${electionId}/toggle-results`
       );
       if (response.data.success) {
         const election = this.elections.find((e) => e.id === electionId);

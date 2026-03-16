@@ -17,7 +17,7 @@ app.use(express.json());
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/cr_voting_app')
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB connection failed:', err));
 

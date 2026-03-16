@@ -1,0 +1,121 @@
+diff --git a/node_modules/react-native-gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.bin b/node_modules/react-native-gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.bin
+new file mode 100644
+index 0000000..3aa4942
+Binary files /dev/null and b/node_modules/react-native-gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.bin differ
+diff --git a/node_modules/react-native-gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.lock b/node_modules/react-native-gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.lock
+new file mode 100644
+index 0000000..582e6c0
+Binary files /dev/null and b/node_modules/react-native-gradle-plugin/.gradle/8.14.3/executionHistory/executionHistory.lock differ
+diff --git a/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/buildOutputCleanup.lock b/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/buildOutputCleanup.lock
+new file mode 100644
+index 0000000..0b1466d
+Binary files /dev/null and b/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/buildOutputCleanup.lock differ
+diff --git a/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/cache.properties b/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/cache.properties
+new file mode 100644
+index 0000000..4a80469
+--- /dev/null
++++ b/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/cache.properties
+@@ -0,0 +1,2 @@
++#Sat Mar 14 15:58:41 IST 2026
++gradle.version=8.14.3
+diff --git a/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/outputFiles.bin b/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/outputFiles.bin
+new file mode 100644
+index 0000000..2e44724
+Binary files /dev/null and b/node_modules/react-native-gradle-plugin/.gradle/buildOutputCleanup/outputFiles.bin differ
+diff --git a/node_modules/react-native-gradle-plugin/.gradle/file-system.probe b/node_modules/react-native-gradle-plugin/.gradle/file-system.probe
+new file mode 100644
+index 0000000..614241c
+Binary files /dev/null and b/node_modules/react-native-gradle-plugin/.gradle/file-system.probe differ
+diff --git a/node_modules/react-native-gradle-plugin/build.gradle.kts b/node_modules/react-native-gradle-plugin/build.gradle.kts
+index dd9a08a..324558b 100644
+--- a/node_modules/react-native-gradle-plugin/build.gradle.kts
++++ b/node_modules/react-native-gradle-plugin/build.gradle.kts
+@@ -7,7 +7,7 @@
+ 
+ import org.gradle.api.internal.classpath.ModuleRegistry
+ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+-import org.gradle.configurationcache.extensions.serviceOf
++//import org.gradle.configurationcache.extensions.serviceOf
+ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+ 
+ plugins {
+@@ -40,13 +40,13 @@ dependencies {
+ 
+   testImplementation("junit:junit:4.13.2")
+ 
+-  testRuntimeOnly(
++  /*testRuntimeOnly(
+       files(
+           serviceOf<ModuleRegistry>()
+               .getModule("gradle-tooling-api-builders")
+               .classpath
+               .asFiles
+-              .first()))
++              .first()))*/
+ }
+ 
+ java {
+@@ -55,7 +55,12 @@ java {
+ }
+ 
+ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+-  kotlinOptions { jvmTarget = JavaVersion.VERSION_11.majorVersion }
++  kotlinOptions {
++    jvmTarget = JavaVersion.VERSION_11.majorVersion
++    freeCompilerArgs += listOf("-Xskip-metadata-version-check")
++    apiVersion = "1.6"
++    languageVersion = "1.6"
++  }
+ }
+ 
+ tasks.withType<Test>().configureEach {
+diff --git a/node_modules/react-native-gradle-plugin/build/kotlin/compileKotlin/build-history.bin b/node_modules/react-native-gradle-plugin/build/kotlin/compileKotlin/build-history.bin
+new file mode 100644
+index 0000000..9297196
+Binary files /dev/null and b/node_modules/react-native-gradle-plugin/build/kotlin/compileKotlin/build-history.bin differ
+diff --git a/node_modules/react-native-gradle-plugin/build/kotlin/compileKotlin/dirty-sources.txt b/node_modules/react-native-gradle-plugin/build/kotlin/compileKotlin/dirty-sources.txt
+new file mode 100644
+index 0000000..b6f3f86
+--- /dev/null
++++ b/node_modules/react-native-gradle-plugin/build/kotlin/compileKotlin/dirty-sources.txt
+@@ -0,0 +1,25 @@
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\DependencyUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\JsonUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\NdkConfiguratorUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\BundleHermesCTask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\BuildCodegenCLITask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareJSCTask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\AgpConfiguratorUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PreparePrefabHeadersTask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\ReactExtension.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\FileUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareBoostTask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\model\ModelCodegenConfig.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\model\ModelPackageJson.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\ProjectUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\Os.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\PathUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\model\ModelCodegenConfigAndroid.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareGlogTask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\utils\TaskUtils.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\PrepareLibeventTask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\internal\utils\PrefabPreprocessingEntry.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\ReactPlugin.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\TaskConfiguration.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\GenerateCodegenArtifactsTask.kt
++C:\Users\Mouneesh\Projects\Mobile_App\reactnative\CRVotingApp\frontend\node_modules\react-native-gradle-plugin\src\main\kotlin\com\facebook\react\tasks\GenerateCodegenSchemaTask.kt
+\ No newline at end of file
+diff --git a/node_modules/react-native-gradle-plugin/build/pluginDescriptors/com.facebook.react.properties b/node_modules/react-native-gradle-plugin/build/pluginDescriptors/com.facebook.react.properties
+new file mode 100644
+index 0000000..f3b415e
+--- /dev/null
++++ b/node_modules/react-native-gradle-plugin/build/pluginDescriptors/com.facebook.react.properties
+@@ -0,0 +1 @@
++implementation-class=com.facebook.react.ReactPlugin
+diff --git a/node_modules/react-native-gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.properties b/node_modules/react-native-gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.properties
+new file mode 100644
+index 0000000..f3b415e
+--- /dev/null
++++ b/node_modules/react-native-gradle-plugin/build/resources/main/META-INF/gradle-plugins/com.facebook.react.properties
+@@ -0,0 +1 @@
++implementation-class=com.facebook.react.ReactPlugin

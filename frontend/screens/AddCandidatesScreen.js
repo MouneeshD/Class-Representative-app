@@ -14,10 +14,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance.js';
 import DataStore from '../utils/dataStore.js';
 
-const API_URL = 'http://10.0.2.2:5000/api';
+
 
 export default function AddCandidatesScreen({ route, navigation }) {
   const { electionId } = route.params;
@@ -69,8 +69,7 @@ export default function AddCandidatesScreen({ route, navigation }) {
     setSubmitting(true);
 
     try {
-      // Call API directly instead of through DataStore
-      const response = await axios.post(`${API_URL}/candidates`, {
+      const response = await axiosInstance.post('candidates', {
         electionId,
         name: candidateName.trim(),
         qualification: qualification.trim() || null,
@@ -110,8 +109,8 @@ export default function AddCandidatesScreen({ route, navigation }) {
     setSubmitting(true);
 
     try {
-      const response = await axios.put(
-        `${API_URL}/candidates/${editingCandidate.id}`,
+      const response = await axiosInstance.put(
+        `candidates/${editingCandidate.id}`,
         {
           name: editName.trim(),
           qualification: editQualification.trim() || null,
@@ -155,8 +154,8 @@ export default function AddCandidatesScreen({ route, navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await axios.delete(
-                `${API_URL}/candidates/${candidate.id}`
+              const response = await axiosInstance.delete(
+                `candidates/${candidate.id}`
               );
 
               if (response.data.success) {

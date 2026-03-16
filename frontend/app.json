@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.mouneesh_d.CRVotingApp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,7 +29,11 @@
     "extra": {
       "eas": {
         "projectId": "f140ada8-41d3-454c-b135-84c6c135baaa"
-      }
-    }
+      },
+      "apiUrl": "http://10.130.20.16:5000/api"
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
