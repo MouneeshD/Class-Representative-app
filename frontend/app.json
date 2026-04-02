@@ -4,11 +4,11 @@
     "slug": "CRVotingApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo-icon-clean.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo-icon-clean.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/logo-adaptive-clean.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -30,7 +30,7 @@
       "eas": {
         "projectId": "f140ada8-41d3-454c-b135-84c6c135baaa"
       },
-      "apiUrl": "http://10.130.20.16:5000/api"
+      "apiUrl": "https://class-representative-app.onrender.com/api"
     },
     "plugins": [
       "expo-font"

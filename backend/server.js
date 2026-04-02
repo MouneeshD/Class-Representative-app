@@ -16,6 +16,16 @@ app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const generateElectionId = () => {
+  let prefix = '';
+  for (let i = 0; i < 2; i += 1) {
+    prefix += LETTERS.charAt(Math.floor(Math.random() * LETTERS.length));
+  }
+  const suffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `${prefix}${suffix}`;
+};
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
@@ -159,7 +169,7 @@ app.post('/api/elections', authenticateToken, authenticateFaculty, async (req, r
     let exists = true;
     
     while (exists) {
-      electionId = (Math.floor(Math.random() * 9000) + 1000).toString();
+      electionId = generateElectionId();
       exists = await Election.findOne({ electionId });
     }
 

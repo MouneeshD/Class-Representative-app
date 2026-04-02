@@ -8,6 +8,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
@@ -72,7 +75,12 @@ export default function CreateElectionScreen({ navigation }) {
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <ScrollView style={styles.content}>
+      <SafeAreaView style={{flex: 1}}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{flex: 1}}
+        >
+          <ScrollView style={styles.content}>
         <LinearGradient
           colors={['#FF6F00', '#FF8F00']}
           style={styles.infoCard}
@@ -129,6 +137,8 @@ export default function CreateElectionScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </View>
   );
 }

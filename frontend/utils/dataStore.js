@@ -141,10 +141,11 @@ class DataStore {
 
   async getElectionById(id) {
     try {
-      const response = await axiosInstance.get(`elections/${id}`);
+      const normalizedId = String(id || '').trim().toUpperCase();
+      const response = await axiosInstance.get(`elections/${normalizedId}`);
       if (response.data.success) {
         const election = this._transformElection(response.data.election);
-        const idx = this.elections.findIndex((e) => e.id === id);
+        const idx = this.elections.findIndex((e) => e.id === normalizedId);
         if (idx >= 0) {
           this.elections[idx] = election;
         } else {

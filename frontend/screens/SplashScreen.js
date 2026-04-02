@@ -4,13 +4,10 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Dimensions,
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
-
-const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen({ navigation }) {
   const fadeAnim = new Animated.Value(0);

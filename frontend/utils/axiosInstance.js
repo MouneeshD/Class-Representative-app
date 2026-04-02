@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Constants from 'expo-constants';
 
-const API_URL = 'http://10.0.2.2:5000/api'; // Android Emulator - change for APK: your_pc_ip
+const API_URL = 'https://class-representative-app.onrender.com/api'; // Android Emulator - change for APK: your_pc_ip
 
 const axiosInstance = axios.create({
   timeout: 10000, // 10s timeout

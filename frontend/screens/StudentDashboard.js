@@ -9,6 +9,7 @@ import DataStore from '../utils/dataStore.js';
 
 export default function StudentDashboard({ navigation }) {
   const [electionIdInput, setElectionIdInput] = useState('');
+  const [activeSection, setActiveSection] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [joinedElections, setJoinedElections] = useState([]);
@@ -56,13 +57,15 @@ export default function StudentDashboard({ navigation }) {
   };
 
   const handleJoinElection = async () => {
-    if (!electionIdInput.trim()) {
+    const normalizedElectionId = electionIdInput.trim().toUpperCase();
+
+    if (!normalizedElectionId) {
       Alert.alert('Error', 'Please enter an Election ID');
       return;
     }
 
     const alreadyJoined = DataStore.studentJoinedElectionIds.includes(
-      electionIdInput.trim()
+      normalizedElectionId
     );
     if (alreadyJoined) {
       Alert.alert('Already Joined', 'You have already joined this election');
@@ -71,7 +74,7 @@ export default function StudentDashboard({ navigation }) {
     }
 
     setLoading(true);
-    const election = await DataStore.getElectionById(electionIdInput.trim());
+    const election = await DataStore.getElectionById(normalizedElectionId);
     setLoading(false);
 
     if (!election) {
@@ -83,143 +86,6 @@ export default function StudentDashboard({ navigation }) {
     setJoinedElections(DataStore.getStudentJoinedElections());
     setElectionIdInput('');
     navigation.navigate('Voting', { electionId: election.id });
-  };
-
-  const getElectionStatus = (election) => {
-    const hasVoted = election.hasStudentVoted(DataStore.currentUserRegNo || '');
-    const isClosed = election.isClosed;
-
-    if (hasVoted && isClosed) {
-      return { label: 'Closed', color: '#9C27B0', bg: '#9C27B015', icon: 'lock' };
-    } else if (hasVoted) {
-      return { label: 'Voted', color: '#2196F3', bg: '#2196F315', icon: 'check-circle' };
-    } else if (isClosed) {
-      return { label: 'Closed', color: '#999999', bg: '#99999915', icon: 'lock' };
-    } else {
-      return { label: 'Active', color: '#FF6F00', bg: '#FF6F0015', icon: 'clock-outline' };
-    }
-  };
-
-  const handleElectionCardPress = (election) => {
-    const hasVoted = election.hasStudentVoted(DataStore.currentUserRegNo || '');
-    const isClosed = election.isClosed;
-
-    if (hasVoted && isClosed) {
-      navigation.navigate('Results', { electionId: election.id });
-    } else if (hasVoted && !isClosed) {
-      Alert.alert(
-        'Election Still Active',
-        'You have already voted. Results will be available once the faculty closes this election.'
-      );
-    } else if (!hasVoted && isClosed) {
-      Alert.alert('Voting Closed', 'This election has been closed by the faculty.');
-    } else {
-      navigation.navigate('Voting', { electionId: election.id });
-    }
-  };
-
-  const renderElectionCard = (election) => {
-    const hasVoted = election.hasStudentVoted(DataStore.currentUserRegNo || '');
-    const isClosed = election.isClosed;
-    const status = getElectionStatus(election);
-    const turnoutPercent =
-      election.maxVotes > 0
-        ? Math.min(Math.round((election.currentVoteCount / election.maxVotes) * 100), 100)
-        : 0;
-
-    return (
-      <TouchableOpacity
-        key={election.id}
-        style={[
-          styles.electionCard,
-          hasVoted && isClosed && styles.resultReadyCard,
-        ]}
-        onPress={() => handleElectionCardPress(election)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.electionHeader}>
-          <Text style={styles.electionTitle} numberOfLines={1}>
-            {election.title}
-          </Text>
-          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-            <Icon name={status.icon} size={13} color={status.color} />
-            <Text style={[styles.statusText, { color: status.color }]}>
-              {status.label}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.electionIdContainer}>
-          <Icon name="tag" size={16} color="#6A1B9A" />
-          <Text style={styles.electionId}>ID: {election.id}</Text>
-        </View>
-
-        <View style={styles.electionInfo}>
-          <View style={styles.infoItem}>
-            <Icon name="account-group" size={16} color="#666666" />
-            <Text style={styles.infoText}>
-              {election.currentVoteCount} / {election.maxVotes} votes
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Icon name="calendar" size={14} color="#666666" />
-            <Text style={styles.infoText}>
-              {new Date(election.createdAt).toLocaleDateString()}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.progressBarContainer}>
-          <View
-            style={[
-              styles.progressBar,
-              {
-                width: `${turnoutPercent}%`,
-                backgroundColor: isClosed ? '#999999' : '#6A1B9A',
-              },
-            ]}
-          />
-        </View>
-
-        <View style={styles.actionRow}>
-          {hasVoted && isClosed && (
-            <TouchableOpacity
-              style={styles.viewResultsButton}
-              onPress={() => navigation.navigate('Results', { electionId: election.id })}
-            >
-              <Icon name="trophy" size={16} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>View Results</Text>
-            </TouchableOpacity>
-          )}
-
-          {hasVoted && !isClosed && (
-            <View style={styles.waitingRow}>
-              <Icon name="clock-outline" size={16} color="#2196F3" />
-              <Text style={styles.waitingText}>
-                Vote submitted. Waiting for faculty to close election
-              </Text>
-            </View>
-          )}
-
-          {!hasVoted && !isClosed && (
-            <TouchableOpacity
-              style={styles.voteNowButton}
-              onPress={() => navigation.navigate('Voting', { electionId: election.id })}
-            >
-              <Icon name="vote" size={16} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Vote Now</Text>
-            </TouchableOpacity>
-          )}
-
-          {!hasVoted && isClosed && (
-            <View style={styles.closedRow}>
-              <Icon name="lock" size={16} color="#999999" />
-              <Text style={styles.closedText}>Election closed by faculty</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   if (loading) {
@@ -240,67 +106,109 @@ export default function StudentDashboard({ navigation }) {
         </TouchableOpacity>
       </LinearGradient>
 
-      <ScrollView
-        style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.welcomeCard}>
-          <View style={styles.welcomeIconContainer}>
-            <Icon name="account" size={32} color="#FFFFFF" />
-          </View>
-          <View style={styles.welcomeTextContainer}>
-            <Text style={styles.welcomeLabel}>Welcome back</Text>
-            <Text style={styles.welcomeName}>
-              {DataStore.currentUser?.fullName || 'Student'}
-            </Text>
-          </View>
-          <View style={styles.welcomeStats}>
-            <Text style={styles.welcomeStatValue}>{joinedElections.length}</Text>
-            <Text style={styles.welcomeStatLabel}>Elections</Text>
-          </View>
-        </LinearGradient>
-
-        <View style={styles.joinCard}>
-          <View style={styles.joinHeader}>
-            <View style={styles.joinIconContainer}>
-              <Icon name="login" size={22} color="#6A1B9A" />
+      <View style={styles.fixedTop}>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Profile')}>
+          <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.welcomeCard}>
+            <View style={styles.welcomeIconContainer}>
+              <Icon name="account" size={32} color="#FFFFFF" />
             </View>
-            <Text style={styles.joinTitle}>Join Election</Text>
-          </View>
-          <TextInput
-            style={styles.joinInput}
-            placeholder="Enter 4-digit Election ID"
-            placeholderTextColor="#999999"
-            value={electionIdInput}
-            onChangeText={setElectionIdInput}
-            keyboardType="number-pad"
-            maxLength={4}
-          />
-          <TouchableOpacity onPress={handleJoinElection}>
-            <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.joinButton}>
-              <Icon name="vote" size={20} color="#FFFFFF" />
-              <Text style={styles.joinButtonText}>Join Election</Text>
-            </LinearGradient>
+            <View style={styles.welcomeTextContainer}>
+              <Text style={styles.welcomeLabel}>Welcome back</Text>
+              <Text style={styles.welcomeName}>
+                {DataStore.currentUser?.fullName || 'Student'}
+              </Text>
+            </View>
+            <View style={styles.welcomeStats}>
+              <Text style={styles.welcomeStatValue}>{joinedElections.length}</Text>
+              <Text style={styles.welcomeStatLabel}>Elections</Text>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <View style={styles.sectionTabs}>
+          <TouchableOpacity
+            style={[
+              styles.sectionTab,
+              activeSection === 'join' && styles.sectionTabActive,
+            ]}
+            onPress={() => setActiveSection('join')}
+          >
+            <Icon
+              name="login"
+              size={20}
+              color={activeSection === 'join' ? '#FFFFFF' : '#6A1B9A'}
+            />
+            <Text
+              style={[
+                styles.sectionTabText,
+                activeSection === 'join' && styles.sectionTabTextActive,
+              ]}
+            >
+              Join Election
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.sectionTab,
+            ]}
+            onPress={() => navigation.navigate('StudentMyElections')}
+          >
+            <Icon
+              name="format-list-bulleted"
+              size={20}
+              color="#6A1B9A"
+            />
+            <Text
+              style={styles.sectionTabText}
+            >
+              My Elections
+            </Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>My Elections</Text>
-          <View style={styles.sectionBadge}>
-            <Text style={styles.sectionCount}>{joinedElections.length}</Text>
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {activeSection === 'join' && (
+          <View style={styles.joinCard}>
+            <View style={styles.joinHeader}>
+              <View style={styles.joinIconContainer}>
+                <Icon name="login" size={22} color="#6A1B9A" />
+              </View>
+              <Text style={styles.joinTitle}>Join Election</Text>
+            </View>
+            <TextInput
+              style={styles.joinInput}
+              placeholder="Enter Election ID (e.g., AB1234)"
+              placeholderTextColor="#999999"
+              value={electionIdInput}
+              onChangeText={(value) => setElectionIdInput(value.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              keyboardType="default"
+              maxLength={6}
+            />
+            <TouchableOpacity onPress={handleJoinElection}>
+              <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.joinButton}>
+                <Icon name="vote" size={20} color="#FFFFFF" />
+                <Text style={styles.joinButtonText}>Join Election</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        </View>
+        )}
 
-        {joinedElections.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Icon name="inbox-outline" size={80} color="#CCCCCC" />
-            <Text style={styles.emptyTitle}>No Elections Yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Enter an Election ID above to join and vote
+        {!activeSection && (
+          <View style={styles.placeholderCard}>
+            <Icon name="gesture-tap-button" size={38} color="#6A1B9A" />
+            <Text style={styles.placeholderTitle}>Choose a Section</Text>
+            <Text style={styles.placeholderSubtitle}>
+              Tap Join Election or My Elections to continue
             </Text>
           </View>
-        ) : (
-          joinedElections.map(renderElectionCard)
         )}
       </ScrollView>
     </View>
@@ -314,8 +222,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
   logoutButton: { padding: 8 },
-  content: { flex: 1, padding: 16 },
-  welcomeCard: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 16, marginBottom: 20, elevation: 4 },
+  fixedTop: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  scrollArea: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 16 },
+  welcomeCard: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 16, marginBottom: 14, elevation: 4 },
   welcomeIconContainer: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 50, padding: 12, marginRight: 16 },
   welcomeTextContainer: { flex: 1 },
   welcomeLabel: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
@@ -323,6 +233,51 @@ const styles = StyleSheet.create({
   welcomeStats: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, padding: 10 },
   welcomeStatValue: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
   welcomeStatLabel: { fontSize: 11, color: 'rgba(255,255,255,0.8)' },
+  sectionTabs: { flexDirection: 'row', gap: 10 },
+  sectionTab: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#6A1B9A20',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    elevation: 2,
+  },
+  sectionTabActive: {
+    backgroundColor: '#6A1B9A',
+    borderColor: '#6A1B9A',
+  },
+  sectionTabText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#6A1B9A',
+  },
+  sectionTabTextActive: {
+    color: '#FFFFFF',
+  },
+  placeholderCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 26,
+    alignItems: 'center',
+    marginTop: 4,
+    elevation: 2,
+  },
+  placeholderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#424242',
+    marginTop: 10,
+  },
+  placeholderSubtitle: {
+    fontSize: 13,
+    color: '#777777',
+    marginTop: 6,
+    textAlign: 'center',
+  },
   joinCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 24, elevation: 4 },
   joinHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   joinIconContainer: { backgroundColor: '#6A1B9A10', borderRadius: 8, padding: 8, marginRight: 12 },
@@ -330,32 +285,4 @@ const styles = StyleSheet.create({
   joinInput: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, fontSize: 16, marginBottom: 16, backgroundColor: '#FAFAFA', color: '#000000' },
   joinButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, gap: 8 },
   joinButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#424242' },
-  sectionBadge: { backgroundColor: '#6A1B9A', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
-  sectionCount: { fontSize: 14, color: '#FFFFFF', fontWeight: 'bold' },
-  electionCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 },
-  resultReadyCard: { borderLeftWidth: 4, borderLeftColor: '#4CAF50' },
-  electionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  electionTitle: { fontSize: 16, fontWeight: 'bold', flex: 1, marginRight: 8 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, gap: 4 },
-  statusText: { fontSize: 11, fontWeight: 'bold' },
-  electionIdContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#6A1B9A08', padding: 10, borderRadius: 8, marginBottom: 10, gap: 8 },
-  electionId: { fontSize: 14, fontWeight: 'bold', color: '#6A1B9A' },
-  electionInfo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  infoItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  infoText: { fontSize: 13, color: '#666666' },
-  progressBarContainer: { height: 6, backgroundColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 12 },
-  progressBar: { height: '100%', borderRadius: 3 },
-  actionRow: { marginTop: 4 },
-  viewResultsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4CAF50', paddingVertical: 10, borderRadius: 10, gap: 8 },
-  voteNowButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#6A1B9A', paddingVertical: 10, borderRadius: 10, gap: 8 },
-  actionButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
-  waitingRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2196F315', padding: 10, borderRadius: 10, gap: 8 },
-  waitingText: { fontSize: 12, color: '#2196F3', fontWeight: '500', flex: 1 },
-  closedRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#99999915', padding: 10, borderRadius: 10, gap: 8 },
-  closedText: { fontSize: 13, color: '#999999', fontWeight: '500' },
-  emptyState: { backgroundColor: '#FAFAFA', borderRadius: 16, padding: 40, alignItems: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#666666', marginTop: 16 },
-  emptySubtitle: { fontSize: 14, color: '#999999', textAlign: 'center', marginTop: 8 },
 });
