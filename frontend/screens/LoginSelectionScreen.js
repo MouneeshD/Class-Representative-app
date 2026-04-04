@@ -5,14 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function LoginSelectionScreen({ navigation }) {
+  const { isCompact, formPadding, headerTopPadding } = useResponsiveLayout();
   const handleRoleSelection = (role) => {
     navigation.navigate('Auth', { role });
   };
@@ -22,15 +21,20 @@ export default function LoginSelectionScreen({ navigation }) {
       colors={['rgba(106, 27, 154, 0.05)', '#FFFFFF', 'rgba(255, 111, 0, 0.05)']}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { padding: formPadding, paddingTop: Math.max(headerTopPadding + 18, 48) },
+        ]}
+      >
         <View style={styles.header}>
           <LinearGradient
             colors={['#6A1B9A', '#9C27B0']}
-            style={styles.iconContainer}
+            style={[styles.iconContainer, isCompact && styles.iconContainerCompact]}
           >
-            <Icon name="vote" size={80} color="#FFFFFF" />
+            <Icon name="vote" size={isCompact ? 64 : 80} color="#FFFFFF" />
           </LinearGradient>
-          <Text style={styles.title}>CR Voting App</Text>
+          <Text style={[styles.title, isCompact && styles.titleCompact]}>CR Voting App</Text>
           <Text style={styles.subtitle}>Select your role to continue</Text>
         </View>
 
@@ -46,7 +50,7 @@ export default function LoginSelectionScreen({ navigation }) {
             >
               <Icon name="school" size={48} color="#FFFFFF" />
             </LinearGradient>
-            <Text style={[styles.cardTitle, { color: '#6A1B9A' }]}>
+            <Text style={[styles.cardTitle, isCompact && styles.cardTitleCompact, { color: '#6A1B9A' }]}>
               Student Login
             </Text>
             <Text style={styles.cardSubtitle}>
@@ -66,7 +70,7 @@ export default function LoginSelectionScreen({ navigation }) {
             >
               <Icon name="account-tie" size={48} color="#FFFFFF" />
             </LinearGradient>
-            <Text style={[styles.cardTitle, { color: '#FF6F00' }]}>
+            <Text style={[styles.cardTitle, isCompact && styles.cardTitleCompact, { color: '#FF6F00' }]}>
               Faculty Login
             </Text>
             <Text style={styles.cardSubtitle}>
@@ -103,12 +107,19 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 10,
   },
+  iconContainerCompact: {
+    padding: 16,
+    marginBottom: 18,
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#6A1B9A',
     marginBottom: 8,
     letterSpacing: 0.5,
+  },
+  titleCompact: {
+    fontSize: 26,
   },
   subtitle: {
     fontSize: 16,
@@ -142,6 +153,9 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 8,
+  },
+  cardTitleCompact: {
+    fontSize: 19,
   },
   cardSubtitle: {
     fontSize: 14,

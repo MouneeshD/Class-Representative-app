@@ -1,9 +1,5 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import DataStore from './dataStore.js'; // Removed circular import
-
-
-import Constants from 'expo-constants';
 
 const API_URL = 'https://class-representative-app.onrender.com/api'; // Android Emulator - change for APK: your_pc_ip
 
@@ -30,7 +26,8 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      DataStore.logout();
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userData');
     }
     return Promise.reject(error);
   }

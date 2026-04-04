@@ -40,6 +40,7 @@ class DataStore {
         this.currentUserRegNo = response.data.user.regNo;
         this.currentUserRole = response.data.user.role;
         await AsyncStorage.setItem('userToken', response.data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
         this.studentJoinedElectionIds = [];
         return true;
       }
@@ -57,6 +58,32 @@ class DataStore {
     this.elections = [];
     this.studentJoinedElectionIds = [];
     await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('userData');
+  }
+
+  async restoreSession() {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const userDataRaw = await AsyncStorage.getItem('userData');
+      if (!token || !userDataRaw) {
+        return null;
+      }
+
+      const userData = JSON.parse(userDataRaw);
+      if (!userData?.role || !userData?.regNo) {
+        return null;
+      }
+
+      this.currentUser = userData;
+      this.currentUserRegNo = userData.regNo;
+      this.currentUserRole = userData.role;
+      this.studentJoinedElectionIds = [];
+
+      return userData;
+    } catch (error) {
+      console.error('Restore session error:', error);
+      return null;
+    }
   }
 
   async refreshElections() {
@@ -79,8 +106,10 @@ class DataStore {
           });
         }
       }
+      return Boolean(response.data?.success);
     } catch (error) {
       console.error('Refresh elections error:', error);
+      return false;
     }
   }
 

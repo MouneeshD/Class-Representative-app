@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function ProfileScreen({ navigation }) {
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const user = DataStore.currentUser || {};
   const isFaculty = user.role === 'faculty';
   const gradientColors = isFaculty ? ['#FF6F00', '#FF8F00'] : ['#6A1B9A', '#9C27B0'];
@@ -24,15 +26,15 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={gradientColors} style={styles.header}>
+      <LinearGradient colors={gradientColors} style={[styles.header, { paddingTop: headerTopPadding }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Profile</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingHorizontal: horizontalPadding }]}>
         <LinearGradient colors={gradientColors} style={styles.profileHero}>
           <View style={styles.avatarWrap}>
             <Icon name={isFaculty ? 'account-tie' : 'account'} size={44} color="#FFFFFF" />
@@ -69,6 +71,7 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 19 },
   content: { flex: 1 },
   contentContainer: { padding: 16, paddingBottom: 24 },
   profileHero: {

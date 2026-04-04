@@ -6,8 +6,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function FacultyMyElectionsScreen({ navigation }) {
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [myElections, setMyElections] = useState([]);
@@ -111,15 +113,18 @@ export default function FacultyMyElectionsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FF6F00', '#FF8F00']} style={styles.header}>
+      <LinearGradient
+        colors={['#FF6F00', '#FF8F00']}
+        style={[styles.header, { paddingTop: headerTopPadding }]}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Elections</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>My Elections</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <View style={styles.fixedTitleRow}>
+      <View style={[styles.fixedTitleRow, { paddingHorizontal: horizontalPadding }]}>
         <Text style={styles.sectionTitle}>My Elections</Text>
         <View style={styles.sectionBadge}>
           <Text style={styles.sectionBadgeText}>{myElections.length}</Text>
@@ -128,7 +133,7 @@ export default function FacultyMyElectionsScreen({ navigation }) {
 
       <ScrollView
         style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {myElections.length === 0 ? (
@@ -152,6 +157,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 19 },
   fixedTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#424242' },
   sectionBadge: { backgroundColor: '#FF6F00', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },

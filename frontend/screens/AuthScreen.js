@@ -15,8 +15,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function AuthScreen({ route, navigation }) {
+  const { isCompact, formPadding, headerTopPadding } = useResponsiveLayout();
   const { role } = route.params;
   const [regNo, setRegNo] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +46,10 @@ export default function AuthScreen({ route, navigation }) {
         await DataStore.refreshElections();
         
         Alert.alert('Success', 'Welcome back!');
-        navigation.replace(isStudent ? 'StudentDashboard' : 'FacultyDashboard');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: isStudent ? 'StudentDashboard' : 'FacultyDashboard' }],
+        });
       } else {
         Alert.alert('Error', 'Invalid credentials');
       }
@@ -65,7 +70,7 @@ export default function AuthScreen({ route, navigation }) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{flex: 1}}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView contentContainerStyle={[styles.scrollContent, { padding: formPadding, paddingTop: Math.max(headerTopPadding + 20, 52) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -81,12 +86,12 @@ export default function AuthScreen({ route, navigation }) {
           />
         </LinearGradient>
 
-        <Text style={[styles.title, { color: colors[0] }]}>
+        <Text style={[styles.title, isCompact && styles.titleCompact, { color: colors[0] }]}>
           Welcome {isStudent ? 'Student' : 'Faculty'}!
         </Text>
         <Text style={styles.subtitle}>Enter your credentials to continue</Text>
 
-        <View style={styles.formCard}>
+        <View style={[styles.formCard, isCompact && styles.formCardCompact]}>
           <View style={styles.inputContainer}>
             <Icon name="badge-account" size={24} color={colors[0]} />
             <TextInput
@@ -180,6 +185,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
+  titleCompact: { fontSize: 24 },
   subtitle: {
     fontSize: 16,
     color: '#666666',
@@ -196,6 +202,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  formCardCompact: { padding: 16 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',

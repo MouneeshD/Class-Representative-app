@@ -6,8 +6,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function StudentMyElectionsScreen({ navigation }) {
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [joinedElections, setJoinedElections] = useState([]);
@@ -118,7 +120,7 @@ export default function StudentMyElectionsScreen({ navigation }) {
           <View
             style={[
               styles.progressBar,
-              {  backgroundColor: isClosed ? '#999999' : '#6A1B9A' },
+              { width: `${turnout}%`, backgroundColor: isClosed ? '#999999' : '#6A1B9A' },
             ]}
           />
         </View>
@@ -137,15 +139,18 @@ export default function StudentMyElectionsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.header}>
+      <LinearGradient
+        colors={['#6A1B9A', '#9C27B0']}
+        style={[styles.header, { paddingTop: headerTopPadding }]}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Elections</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>My Elections</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <View style={styles.fixedTitleRow}>
+      <View style={[styles.fixedTitleRow, { paddingHorizontal: horizontalPadding }]}>
         <Text style={styles.sectionTitle}>My Elections</Text>
         <View style={styles.sectionBadge}>
           <Text style={styles.sectionCount}>{joinedElections.length}</Text>
@@ -154,7 +159,7 @@ export default function StudentMyElectionsScreen({ navigation }) {
 
       <ScrollView
         style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {joinedElections.length === 0 ? (
@@ -178,6 +183,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 19 },
   fixedTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#424242' },
   sectionBadge: { backgroundColor: '#6A1B9A', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },

@@ -6,8 +6,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function FacultyDashboard({ navigation }) {
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const [activeSection, setActiveSection] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -71,14 +73,17 @@ export default function FacultyDashboard({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FF6F00', '#FF8F00']} style={styles.header}>
-        <Text style={styles.headerTitle}>Faculty Dashboard</Text>
+      <LinearGradient
+        colors={['#FF6F00', '#FF8F00']}
+        style={[styles.header, { paddingTop: headerTopPadding }]}
+      >
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Faculty Dashboard</Text>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Icon name="logout" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </LinearGradient>
 
-      <View style={styles.fixedTop}>
+      <View style={[styles.fixedTop, { paddingHorizontal: horizontalPadding }]}>
         <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Profile')}>
           <LinearGradient colors={['#FF6F00', '#FF8F00']} style={styles.welcomeCard}>
             <View style={styles.welcomeIconContainer}>
@@ -153,7 +158,7 @@ export default function FacultyDashboard({ navigation }) {
 
       <ScrollView
         style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {activeSection === 'create' && (
@@ -195,6 +200,7 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 16, fontSize: 16, color: '#666666' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 20 },
   logoutButton: { padding: 8 },
   fixedTop: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
   scrollArea: { flex: 1 },

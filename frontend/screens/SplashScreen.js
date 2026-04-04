@@ -8,20 +8,36 @@ import {
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import DataStore from '../utils/dataStore.js';
 
 export default function SplashScreen({ navigation }) {
   const fadeAnim = new Animated.Value(0);
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1500,
-      useNativeDriver: true,
-    }).start();
+    const bootstrap = async () => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }).start();
 
-    setTimeout(() => {
-      navigation.replace('LoginSelection');
-    }, 3000);
+      const user = await DataStore.restoreSession();
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 1400));
+      await minDelay;
+
+      const hasValidSession = user ? await DataStore.refreshElections() : false;
+
+      if (user?.role === 'student' && hasValidSession) {
+        navigation.reset({ index: 0, routes: [{ name: 'StudentDashboard' }] });
+      } else if (user?.role === 'faculty' && hasValidSession) {
+        navigation.reset({ index: 0, routes: [{ name: 'FacultyDashboard' }] });
+      } else {
+        await DataStore.logout();
+        navigation.reset({ index: 0, routes: [{ name: 'LoginSelection' }] });
+      }
+    };
+
+    bootstrap();
   }, []);
 
   return (

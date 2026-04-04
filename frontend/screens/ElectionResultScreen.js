@@ -14,9 +14,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function ElectionResultScreen({ route, navigation }) {
-  const { election: passedElection, electionId: passedId } = route.params;
+  const { election: passedElection, electionId: passedId } = route.params || {};
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const [election, setElection] = useState(passedElection || null);
   const [loading, setLoading] = useState(!passedElection);
   const [downloading, setDownloading] = useState(false);
@@ -71,8 +73,13 @@ export default function ElectionResultScreen({ route, navigation }) {
   const isFaculty = DataStore.currentUserRole === 'faculty';
 
   const totalVotes = election.currentVoteCount || 0;
+  const maxVotes = election.maxVotes || 0;
   const isTie = winners.length > 1;
   const maxVoteCount = winners.length > 0 ? (winners[0].vote_count || 0) : 0;
+  const secondVoteCount = sortedCandidates.length > 1 ? (sortedCandidates[1].vote_count || 0) : 0;
+  const winningMargin = Math.max(maxVoteCount - secondVoteCount, 0);
+  const turnoutPercent = maxVotes > 0 ? ((totalVotes / maxVotes) * 100) : 0;
+  const winningMarginPercent = totalVotes > 0 ? ((winningMargin / totalVotes) * 100) : 0;
 
   const sanitizeForFileName = (value) =>
     String(value || 'election')
@@ -258,16 +265,19 @@ export default function ElectionResultScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.header}>
+      <LinearGradient
+        colors={['#6A1B9A', '#9C27B0']}
+        style={[styles.header, { paddingTop: headerTopPadding }]}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Election Results</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Election Results</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.electionInfoCard}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingHorizontal: horizontalPadding }} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={[styles.electionInfoCard, isCompact && styles.electionInfoCardCompact]}>
           <View style={styles.electionIconRow}>
             <View style={styles.electionIconContainer}>
               <Icon name="vote" size={28} color="#FFFFFF" />
@@ -281,7 +291,7 @@ export default function ElectionResultScreen({ route, navigation }) {
           <View style={styles.infoBadgesRow}>
             <View style={styles.infoBadge}>
               <Icon name="account-group" size={14} color="#FFFFFF" />
-              <Text style={styles.badgeText}>{election.currentVoteCount}/{election.maxVotes}</Text>
+              <Text style={styles.badgeText}>{totalVotes}/{maxVotes}</Text>
             </View>
             <View style={styles.infoBadge}>
               <Icon
@@ -374,44 +384,36 @@ export default function ElectionResultScreen({ route, navigation }) {
             </View>
 
             <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
+              <View style={[styles.statItem, isCompact && styles.statItemCompact]}>
                 <View style={[styles.statIconCircle, { backgroundColor: '#6A1B9A15' }]}>
                   <Icon name="vote" size={20} color="#6A1B9A" />
                 </View>
-                <Text style={styles.statValue}>{election.currentVoteCount}</Text>
+                <Text style={styles.statValue}>{totalVotes}</Text>
                 <Text style={styles.statLabel}>Total Votes</Text>
               </View>
 
-              <View style={styles.statItem}>
+              <View style={[styles.statItem, isCompact && styles.statItemCompact]}>
                 <View style={[styles.statIconCircle, { backgroundColor: '#FF6F0015' }]}>
-                  <Icon name="account-multiple" size={20} color="#FF6F00" />
+                  <Icon name="account-group" size={20} color="#FF6F00" />
                 </View>
-                <Text style={styles.statValue}>{election.candidates.length}</Text>
-                <Text style={styles.statLabel}>Candidates</Text>
+                <Text style={styles.statValue}>{maxVotes}</Text>
+                <Text style={styles.statLabel}>Eligible Voters</Text>
               </View>
 
-              <View style={styles.statItem}>
+              <View style={[styles.statItem, isCompact && styles.statItemCompact]}>
                 <View style={[styles.statIconCircle, { backgroundColor: '#4CAF5015' }]}>
                   <Icon name="poll" size={20} color="#4CAF50" />
                 </View>
-                <Text style={styles.statValue}>
-                  {election.maxVotes > 0
-                    ? ((election.currentVoteCount / election.maxVotes) * 100).toFixed(0)
-                    : 0}%
-                </Text>
+                <Text style={styles.statValue}>{turnoutPercent.toFixed(0)}%</Text>
                 <Text style={styles.statLabel}>Turnout</Text>
               </View>
 
-              <View style={styles.statItem}>
+              <View style={[styles.statItem, isCompact && styles.statItemCompact]}>
                 <View style={[styles.statIconCircle, { backgroundColor: '#2196F315' }]}>
-                  <Icon name="chart-bar" size={20} color="#2196F3" />
+                  <Icon name="trending-up" size={20} color="#2196F3" />
                 </View>
-                <Text style={styles.statValue}>
-                  {election.candidates.length > 0
-                    ? (election.currentVoteCount / election.candidates.length).toFixed(1)
-                    : 0}
-                </Text>
-                <Text style={styles.statLabel}>Avg/Candidate</Text>
+                <Text style={styles.statValue}>{winningMargin} ({winningMarginPercent.toFixed(1)}%)</Text>
+                <Text style={styles.statLabel}>Winning Margin</Text>
               </View>
             </View>
           </View>
@@ -492,13 +494,15 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
-  content: { flex: 1, padding: 16 },
+  headerTitleCompact: { fontSize: 18 },
+  content: { flex: 1 },
   electionInfoCard: {
     padding: 20,
     borderRadius: 16,
     marginBottom: 16,
     elevation: 4,
   },
+  electionInfoCardCompact: { padding: 14 },
   electionIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -770,6 +774,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+  },
+  statItemCompact: {
+    width: '100%',
   },
   statIconCircle: {
     width: 44,

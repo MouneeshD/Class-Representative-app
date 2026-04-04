@@ -6,8 +6,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function StudentDashboard({ navigation }) {
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const [electionIdInput, setElectionIdInput] = useState('');
   const [activeSection, setActiveSection] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,22 +101,25 @@ export default function StudentDashboard({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.header}>
-        <Text style={styles.headerTitle}>Student Dashboard</Text>
+      <LinearGradient
+        colors={['#6A1B9A', '#9C27B0']}
+        style={[styles.header, { paddingTop: headerTopPadding }]}
+      >
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Student Dashboard</Text>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Icon name="logout" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </LinearGradient>
 
-      <View style={styles.fixedTop}>
+      <View style={[styles.fixedTop, { paddingHorizontal: horizontalPadding }]}>
         <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Profile')}>
-          <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.welcomeCard}>
+          <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={[styles.welcomeCard, isCompact && styles.welcomeCardCompact]}>
             <View style={styles.welcomeIconContainer}>
               <Icon name="account" size={32} color="#FFFFFF" />
             </View>
             <View style={styles.welcomeTextContainer}>
               <Text style={styles.welcomeLabel}>Welcome back</Text>
-              <Text style={styles.welcomeName}>
+              <Text style={[styles.welcomeName, isCompact && styles.welcomeNameCompact]} numberOfLines={1}>
                 {DataStore.currentUser?.fullName || 'Student'}
               </Text>
             </View>
@@ -129,6 +134,7 @@ export default function StudentDashboard({ navigation }) {
           <TouchableOpacity
             style={[
               styles.sectionTab,
+              styles.leftTab,
               activeSection === 'join' && styles.sectionTabActive,
             ]}
             onPress={() => setActiveSection('join')}
@@ -170,7 +176,7 @@ export default function StudentDashboard({ navigation }) {
 
       <ScrollView
         style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {activeSection === 'join' && (
@@ -183,7 +189,7 @@ export default function StudentDashboard({ navigation }) {
             </View>
             <TextInput
               style={styles.joinInput}
-              placeholder="Enter Election ID (e.g., AB1234)"
+              placeholder="Enter Election ID "
               placeholderTextColor="#999999"
               value={electionIdInput}
               onChangeText={(value) => setElectionIdInput(value.toUpperCase())}
@@ -221,19 +227,22 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 16, fontSize: 16, color: '#666666' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 20 },
   logoutButton: { padding: 8 },
   fixedTop: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
   scrollArea: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 16 },
   welcomeCard: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 16, marginBottom: 14, elevation: 4 },
+  welcomeCardCompact: { padding: 14 },
   welcomeIconContainer: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 50, padding: 12, marginRight: 16 },
   welcomeTextContainer: { flex: 1 },
   welcomeLabel: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
   welcomeName: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginTop: 4 },
+  welcomeNameCompact: { fontSize: 17 },
   welcomeStats: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, padding: 10 },
   welcomeStatValue: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
   welcomeStatLabel: { fontSize: 11, color: 'rgba(255,255,255,0.8)' },
-  sectionTabs: { flexDirection: 'row', gap: 10 },
+  sectionTabs: { flexDirection: 'row' },
   sectionTab: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -243,9 +252,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     elevation: 2,
   },
+  leftTab: { marginRight: 10 },
   sectionTabActive: {
     backgroundColor: '#6A1B9A',
     borderColor: '#6A1B9A',

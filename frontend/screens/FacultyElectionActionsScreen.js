@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Scr
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function FacultyElectionActionsScreen({ route, navigation }) {
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const { electionId } = route.params;
   const [loading, setLoading] = useState(true);
   const [election, setElection] = useState(null);
@@ -86,15 +88,18 @@ export default function FacultyElectionActionsScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FF6F00', '#FF8F00']} style={styles.header}>
+      <LinearGradient
+        colors={['#FF6F00', '#FF8F00']}
+        style={[styles.header, { paddingTop: headerTopPadding }]}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Election Actions</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Election Actions</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: horizontalPadding }]}>
         <View style={styles.infoCard}>
           <Text style={styles.title}>{election.title}</Text>
           <Text style={styles.subTitle}>Election ID: {election.id}</Text>
@@ -145,6 +150,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 19 },
   content: { padding: 16, paddingBottom: 24 },
   infoCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#333333' },

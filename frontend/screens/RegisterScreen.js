@@ -16,8 +16,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function RegisterScreen({ route, navigation }) {
+  const { isCompact, formPadding, headerTopPadding } = useResponsiveLayout();
   const { role } = route.params;
   const [fullName, setFullName] = useState('');
   const [regNo, setRegNo] = useState('');
@@ -104,7 +106,7 @@ export default function RegisterScreen({ route, navigation }) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{flex: 1}}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView contentContainerStyle={[styles.scrollContent, { padding: formPadding, paddingTop: Math.max(headerTopPadding + 20, 52) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -116,10 +118,10 @@ export default function RegisterScreen({ route, navigation }) {
           <Icon name="account-plus" size={60} color="#FFFFFF" />
         </LinearGradient>
 
-        <Text style={[styles.title, { color: colors[0] }]}>Create Account</Text>
+        <Text style={[styles.title, isCompact && styles.titleCompact, { color: colors[0] }]}>Create Account</Text>
         <Text style={styles.subtitle}>Fill in your details to register</Text>
 
-        <View style={styles.formCard}>
+        <View style={[styles.formCard, isCompact && styles.formCardCompact]}>
           <View style={styles.inputContainer}>
             <Icon name="account" size={24} color={colors[0]} />
             <TextInput
@@ -283,6 +285,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
+  titleCompact: { fontSize: 24 },
   subtitle: {
     fontSize: 16,
     color: '#666666',
@@ -299,6 +302,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  formCardCompact: { padding: 16 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',

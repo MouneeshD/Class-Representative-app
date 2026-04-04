@@ -15,8 +15,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function CreateElectionScreen({ navigation }) {
+  const { isCompact, formPadding, headerTopPadding } = useResponsiveLayout();
   const [title, setTitle] = useState('');
   const [maxVotes, setMaxVotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -64,14 +66,17 @@ export default function CreateElectionScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FF6F00', '#FF8F00']} style={styles.header}>
+      <LinearGradient
+        colors={['#FF6F00', '#FF8F00']}
+        style={[styles.header, { paddingTop: headerTopPadding }]}
+      >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Election</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Create Election</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
@@ -80,19 +85,19 @@ export default function CreateElectionScreen({ navigation }) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{flex: 1}}
         >
-          <ScrollView style={styles.content}>
+          <ScrollView style={[styles.content, { paddingHorizontal: formPadding }]}>
         <LinearGradient
           colors={['#FF6F00', '#FF8F00']}
           style={styles.infoCard}
         >
           <Icon name="clipboard-check" size={40} color="#FFFFFF" />
           <View style={styles.infoTextContainer}>
-            <Text style={styles.infoTitle}>New Election</Text>
+            <Text style={[styles.infoTitle, isCompact && styles.infoTitleCompact]}>New Election</Text>
             <Text style={styles.infoSubtitle}>Fill in the details below</Text>
           </View>
         </LinearGradient>
 
-        <View style={styles.formCard}>
+        <View style={[styles.formCard, isCompact && styles.formCardCompact]}>
           <Text style={styles.formLabel}>Election Details</Text>
 
           <View style={styles.inputContainer}>
@@ -155,6 +160,7 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 18 },
   content: { flex: 1, padding: 24 },
   infoCard: {
     flexDirection: 'row',
@@ -166,6 +172,7 @@ const styles = StyleSheet.create({
   },
   infoTextContainer: { flex: 1, marginLeft: 16 },
   infoTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
+  infoTitleCompact: { fontSize: 20 },
   infoSubtitle: { fontSize: 14, color: 'rgba(255, 255, 255, 0.7)', marginTop: 4 },
   formCard: {
     backgroundColor: '#FFFFFF',
@@ -173,6 +180,7 @@ const styles = StyleSheet.create({
     padding: 20,
     elevation: 2,
   },
+  formCardCompact: { padding: 16 },
   formLabel: { fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
   inputContainer: {
     flexDirection: 'row',

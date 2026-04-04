@@ -6,8 +6,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function VotingScreen({ route, navigation }) {
+  const { isCompact, horizontalPadding, headerTopPadding } = useResponsiveLayout();
   const { electionId } = route.params;
   const [election, setElection] = useState(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
@@ -119,16 +121,19 @@ export default function VotingScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.header}>
+      <LinearGradient
+        colors={['#6A1B9A', '#9C27B0']}
+        style={[styles.header, { paddingTop: headerTopPadding, paddingHorizontal: horizontalPadding }]}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cast Your Vote</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Cast Your Vote</Text>
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={styles.electionCard}>
-        <Text style={styles.electionTitle}>{election.title}</Text>
+      <LinearGradient colors={['#6A1B9A', '#9C27B0']} style={[styles.electionCard, { marginHorizontal: horizontalPadding }]}>
+        <Text style={[styles.electionTitle, isCompact && styles.electionTitleCompact]}>{election.title}</Text>
         <View style={styles.electionIdBadge}>
           <Text style={styles.electionIdText}>Election ID: {election.id}</Text>
         </View>
@@ -159,7 +164,7 @@ export default function VotingScreen({ route, navigation }) {
         data={election.candidates}
         renderItem={renderCandidate}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingHorizontal: horizontalPadding }]}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Icon name="account-off" size={80} color="#CCCCCC" />
@@ -196,8 +201,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
+  headerTitleCompact: { fontSize: 18 },
   electionCard: { margin: 16, padding: 20, borderRadius: 16, elevation: 4 },
   electionTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12 },
+  electionTitleCompact: { fontSize: 18 },
   electionIdBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 12 },
   electionIdText: { color: '#FFFFFF', fontWeight: 'bold' },
   voteInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },

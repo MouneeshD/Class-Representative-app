@@ -16,10 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import axiosInstance from '../utils/axiosInstance.js';
 import DataStore from '../utils/dataStore.js';
+import { useResponsiveLayout } from '../utils/responsive.js';
 
 
 
 export default function AddCandidatesScreen({ route, navigation }) {
+  const { isCompact, horizontalPadding, formPadding, headerTopPadding } = useResponsiveLayout();
   const { electionId } = route.params;
   const [election, setElection] = useState(null);
   const [candidateName, setCandidateName] = useState('');
@@ -301,22 +303,25 @@ export default function AddCandidatesScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FF6F00', '#FF8F00']} style={styles.header}>
+      <LinearGradient
+        colors={['#FF6F00', '#FF8F00']}
+        style={[styles.header, { paddingTop: headerTopPadding, paddingHorizontal: horizontalPadding }]}
+      >
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Candidates</Text>
+        <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Add Candidates</Text>
         <TouchableOpacity onPress={handleFinish} style={styles.finishButton}>
           <Icon name="check" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </LinearGradient>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={[styles.content, { paddingHorizontal: horizontalPadding }]}>
         <LinearGradient
           colors={['#FF6F00', '#FF8F00']}
-          style={styles.electionCard}
+          style={[styles.electionCard, isCompact && styles.electionCardCompact]}
         >
-          <Text style={styles.electionTitle}>{election.title}</Text>
+          <Text style={[styles.electionTitle, isCompact && styles.electionTitleCompact]}>{election.title}</Text>
           <View style={styles.electionDetails}>
             <View style={styles.detailBadge}>
               <Icon name="tag" size={16} color="#FFFFFF" />
@@ -329,12 +334,12 @@ export default function AddCandidatesScreen({ route, navigation }) {
           </View>
         </LinearGradient>
 
-        <View style={styles.formCard}>
+        <View style={[styles.formCard, { padding: formPadding }]}>
           <View style={styles.formHeader}>
             <View style={styles.formIconContainer}>
               <Icon name="account-plus" size={24} color="#FF6F00" />
             </View>
-            <Text style={styles.formTitle}>Add Candidate</Text>
+          <Text style={[styles.formTitle, isCompact && styles.formTitleCompact]}>Add Candidate</Text>
           </View>
 
           <TextInput
@@ -399,7 +404,7 @@ export default function AddCandidatesScreen({ route, navigation }) {
             extraData={candidates}
           />
         ) : (
-          <View style={styles.emptyState}>
+          <View style={[styles.emptyState, isCompact && styles.emptyStateCompact]}>
             <Icon name="account-plus" size={80} color="#CCCCCC" />
             <Text style={styles.emptyTitle}>No Candidates Yet</Text>
             <Text style={styles.emptySubtitle}>
@@ -503,10 +508,13 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', flex: 1, textAlign: 'center' },
+  headerTitleCompact: { fontSize: 18 },
   finishButton: { padding: 4 },
   content: { flex: 1, padding: 16 },
   electionCard: { padding: 20, borderRadius: 16, marginBottom: 20, elevation: 4 },
+  electionCardCompact: { padding: 14 },
   electionTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12 },
+  electionTitleCompact: { fontSize: 18 },
   electionDetails: { flexDirection: 'row', gap: 12 },
   detailBadge: {
     flexDirection: 'row',
@@ -522,6 +530,7 @@ const styles = StyleSheet.create({
   formHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   formIconContainer: { backgroundColor: '#FF6F0010', borderRadius: 8, padding: 8, marginRight: 12 },
   formTitle: { fontSize: 20, fontWeight: 'bold' },
+  formTitleCompact: { fontSize: 18 },
   input: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -580,6 +589,7 @@ const styles = StyleSheet.create({
   editButton: { backgroundColor: '#2196F315', padding: 10, borderRadius: 8 },
   deleteButton: { backgroundColor: '#F4433615', padding: 10, borderRadius: 8 },
   emptyState: { backgroundColor: '#FAFAFA', borderRadius: 16, padding: 40, alignItems: 'center' },
+  emptyStateCompact: { padding: 24 },
   emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#666666', marginTop: 16 },
   emptySubtitle: { fontSize: 14, color: '#999999', textAlign: 'center', marginTop: 8 },
   modalOverlay: {
