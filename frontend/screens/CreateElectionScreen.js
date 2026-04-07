@@ -19,6 +19,7 @@ import { useResponsiveLayout } from '../utils/responsive.js';
 
 export default function CreateElectionScreen({ navigation }) {
   const { isCompact, formPadding, headerTopPadding } = useResponsiveLayout();
+  const electionIdPattern = /^[A-Z]{2}\d{4}$/;
   const [title, setTitle] = useState('');
   const [maxVotes, setMaxVotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,9 +42,17 @@ export default function CreateElectionScreen({ navigation }) {
       const election = await DataStore.createElection(title.trim(), votes);
 
       if (election) {
+        if (!electionIdPattern.test(String(election.id || '').toUpperCase())) {
+          Alert.alert(
+            'ID Format Mismatch',
+            `Server returned "${election.id}". Expected format is AB1234 (2 letters + 4 numbers).\n\nRestart backend after latest code changes.`
+          );
+          return;
+        }
+
         Alert.alert(
           'Election Created',
-          `Election ID: ${election.id}\n\nShare this ID with students`,
+          `Election ID: ${election.id}\nFormat: AB1234 (2 letters + 4 numbers)\n\nShare this ID with students`,
           [
             {
               text: 'Add Candidates',

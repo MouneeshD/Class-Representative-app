@@ -168,7 +168,7 @@ export default function FacultyDashboard({ navigation }) {
             </View>
             <Text style={styles.createTitle}>Create New Election</Text>
             <Text style={styles.createSubtitle}>
-              Create an election, add candidates, and share the election ID with students.
+              Create an election, add candidates, and share the election ID (AB1234 format) with students.
             </Text>
             <TouchableOpacity
               style={styles.createButton}

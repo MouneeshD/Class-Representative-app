@@ -15,6 +15,7 @@ export default function StudentDashboard({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [joinedElections, setJoinedElections] = useState([]);
+  const electionIdPattern = /^[A-Z]{2}\d{4}$/;
 
   useEffect(() => {
     loadData();
@@ -63,6 +64,10 @@ export default function StudentDashboard({ navigation }) {
 
     if (!normalizedElectionId) {
       Alert.alert('Error', 'Please enter an Election ID');
+      return;
+    }
+    if (!electionIdPattern.test(normalizedElectionId)) {
+      Alert.alert('Error', 'Election ID must be 2 letters + 4 numbers (example: AB1234)');
       return;
     }
 
@@ -189,7 +194,7 @@ export default function StudentDashboard({ navigation }) {
             </View>
             <TextInput
               style={styles.joinInput}
-              placeholder="Enter Election ID "
+              placeholder="Enter Election ID (AB1234)"
               placeholderTextColor="#999999"
               value={electionIdInput}
               onChangeText={(value) => setElectionIdInput(value.toUpperCase())}

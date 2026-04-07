@@ -17,6 +17,7 @@ app.use(express.json());
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const ELECTION_ID_REGEX = /^[A-Z]{2}\d{4}$/;
 const generateElectionId = () => {
   let prefix = '';
   for (let i = 0; i < 2; i += 1) {
@@ -25,6 +26,8 @@ const generateElectionId = () => {
   const suffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   return `${prefix}${suffix}`;
 };
+const normalizeElectionId = (value) => String(value || '').trim().toUpperCase();
+const isValidElectionId = (value) => ELECTION_ID_REGEX.test(normalizeElectionId(value));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -251,7 +254,15 @@ app.get('/api/elections', authenticateToken, async (req, res) => {
 
 app.get('/api/elections/:id', authenticateToken, async (req, res) => {
   try {
-    const election = await Election.findOne({ electionId: req.params.id });
+    const electionId = normalizeElectionId(req.params.id);
+    if (!isValidElectionId(electionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Election ID format. Use 2 letters and 4 numbers (e.g., AB1234)'
+      });
+    }
+
+    const election = await Election.findOne({ electionId });
 
     if (!election) {
       return res.status(404).json({ 
@@ -298,7 +309,8 @@ app.get('/api/elections/:id', authenticateToken, async (req, res) => {
 
 app.put('/api/elections/:id/toggle-results', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const election = await Election.findOne({ electionId: req.params.id });
+    const electionId = normalizeElectionId(req.params.id);
+    const election = await Election.findOne({ electionId });
 
     if (!election) {
       return res.status(404).json({ 
@@ -325,7 +337,8 @@ app.put('/api/elections/:id/toggle-results', authenticateToken, authenticateFacu
 
 app.put('/api/elections/:id/close', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const election = await Election.findOne({ electionId: req.params.id });
+    const electionId = normalizeElectionId(req.params.id);
+    const election = await Election.findOne({ electionId });
 
     if (!election) {
       return res.status(404).json({ 
@@ -352,7 +365,8 @@ app.put('/api/elections/:id/close', authenticateToken, authenticateFaculty, asyn
 
 app.delete('/api/elections/:id', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const election = await Election.findOne({ electionId: req.params.id });
+    const electionId = normalizeElectionId(req.params.id);
+    const election = await Election.findOne({ electionId });
 
     if (!election) {
       return res.status(404).json({ 
@@ -361,9 +375,9 @@ app.delete('/api/elections/:id', authenticateToken, authenticateFaculty, async (
       });
     }
 
-    await Candidate.deleteMany({ electionId: req.params.id });
-    await Vote.deleteMany({ electionId: req.params.id });
-    await Election.deleteOne({ electionId: req.params.id });
+    await Candidate.deleteMany({ electionId });
+    await Vote.deleteMany({ electionId });
+    await Election.deleteOne({ electionId });
 
     res.json({ 
       success: true, 
@@ -382,7 +396,14 @@ app.delete('/api/elections/:id', authenticateToken, authenticateFaculty, async (
 
 app.post('/api/candidates', authenticateToken, authenticateFaculty, async (req, res) => {
   try {
-    const { electionId, name, description, qualification } = req.body;
+    const { name, description, qualification } = req.body;
+    const electionId = normalizeElectionId(req.body.electionId);
+    if (!isValidElectionId(electionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Election ID format. Use 2 letters and 4 numbers (e.g., AB1234)'
+      });
+    }
 
     const count = await Candidate.countDocuments({ electionId });
     const candidateId = `${electionId}_${count + 1}`;
@@ -469,8 +490,15 @@ app.delete('/api/candidates/:id', authenticateToken, authenticateFaculty, async 
 
 app.post('/api/vote', authenticateToken, async (req, res) => {
   try {
-    const { electionId, candidateId } = req.body;
+    const electionId = normalizeElectionId(req.body.electionId);
+    const { candidateId } = req.body;
     const voterRegNo = req.user.regNo;
+    if (!isValidElectionId(electionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Election ID format. Use 2 letters and 4 numbers (e.g., AB1234)'
+      });
+    }
 
     if (req.user.role !== 'student') {
       return res.status(403).json({ 
@@ -535,7 +563,8 @@ app.post('/api/vote', authenticateToken, async (req, res) => {
 
 app.get('/api/elections/:electionId/voted/:regNo', authenticateToken, async (req, res) => {
   try {
-    const { electionId, regNo } = req.params;
+    const electionId = normalizeElectionId(req.params.electionId);
+    const { regNo } = req.params;
 
     const vote = await Vote.findOne({ electionId, voterRegNo: regNo });
 
