@@ -67,7 +67,7 @@ export default function StudentDashboard({ navigation }) {
       return;
     }
     if (!electionIdPattern.test(normalizedElectionId)) {
-      Alert.alert('Error', 'Election ID must be 2 letters + 4 numbers (example: AB1234)');
+      Alert.alert('Error', 'Election ID must be like this eg.AB1234');
       return;
     }
 
@@ -194,7 +194,7 @@ export default function StudentDashboard({ navigation }) {
             </View>
             <TextInput
               style={styles.joinInput}
-              placeholder="Enter Election ID (AB1234)"
+              placeholder="Enter Election ID "
               placeholderTextColor="#999999"
               value={electionIdInput}
               onChangeText={(value) => setElectionIdInput(value.toUpperCase())}

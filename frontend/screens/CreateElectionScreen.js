@@ -45,14 +45,14 @@ export default function CreateElectionScreen({ navigation }) {
         if (!electionIdPattern.test(String(election.id || '').toUpperCase())) {
           Alert.alert(
             'ID Format Mismatch',
-            `Server returned "${election.id}". Expected format is AB1234 (2 letters + 4 numbers).\n\nRestart backend after latest code changes.`
+            `Server returned "${election.id}". Expected format is AB1234`
           );
           return;
         }
 
         Alert.alert(
           'Election Created',
-          `Election ID: ${election.id}\nFormat: AB1234 (2 letters + 4 numbers)\n\nShare this ID with students`,
+          `Election ID: ${election.id}\n\nShare this ID with students`,
           [
             {
               text: 'Add Candidates',
