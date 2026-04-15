@@ -127,6 +127,7 @@ export default function RegisterScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Full Name"
+              placeholderTextColor="#8A8A8A"
               value={fullName}
               onChangeText={setFullName}
               editable={!loading}
@@ -138,6 +139,7 @@ export default function RegisterScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder={isStudent ? 'Register Number' : 'Faculty ID'}
+              placeholderTextColor="#8A8A8A"
               value={regNo}
               onChangeText={setRegNo}
               autoCapitalize="none"
@@ -150,6 +152,7 @@ export default function RegisterScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder={isStudent ? 'College Email' : 'Official Email'}
+              placeholderTextColor="#8A8A8A"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -163,6 +166,7 @@ export default function RegisterScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Department"
+              placeholderTextColor="#8A8A8A"
               value={department}
               onChangeText={setDepartment}
               editable={!loading}
@@ -191,6 +195,7 @@ export default function RegisterScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Password"
+              placeholderTextColor="#8A8A8A"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -210,6 +215,7 @@ export default function RegisterScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
+              placeholderTextColor="#8A8A8A"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
@@ -318,6 +324,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     fontSize: 16,
+    color: '#1F1F1F',
   },
   picker: {
     flex: 1,

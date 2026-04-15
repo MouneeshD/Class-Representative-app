@@ -97,6 +97,7 @@ export default function AuthScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder={isStudent ? 'Register Number' : 'Faculty ID'}
+              placeholderTextColor="#8A8A8A"
               value={regNo}
               onChangeText={setRegNo}
               autoCapitalize="none"
@@ -109,6 +110,7 @@ export default function AuthScreen({ route, navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Password"
+              placeholderTextColor="#8A8A8A"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -218,6 +220,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     fontSize: 16,
+    color: '#1F1F1F',
   },
   loginButton: {
     borderRadius: 12,
