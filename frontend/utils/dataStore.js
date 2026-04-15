@@ -108,7 +108,9 @@ class DataStore {
       }
       return Boolean(response.data?.success);
     } catch (error) {
-      console.error('Refresh elections error:', error);
+      if (__DEV__) {
+        console.log('Refresh elections failed. App will continue with cached data.');
+      }
       return false;
     }
   }
