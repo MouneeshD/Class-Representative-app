@@ -20,6 +20,7 @@
         "foregroundImage": "./assets/logo-adaptive-clean.png",
         "backgroundColor": "#ffffff"
       },
+      "softwareKeyboardLayoutMode": "resize",
       "edgeToEdgeEnabled": true,
       "package": "com.mouneesh_d.CRVotingApp"
     },

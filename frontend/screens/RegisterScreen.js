@@ -106,7 +106,7 @@ export default function RegisterScreen({ route, navigation }) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{flex: 1}}
         >
-          <ScrollView contentContainerStyle={[styles.scrollContent, { padding: formPadding, paddingTop: Math.max(headerTopPadding + 20, 52) }]}>
+          <ScrollView contentContainerStyle={[styles.scrollContent, { padding: formPadding, paddingTop: Math.max(headerTopPadding + 8, 26) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}

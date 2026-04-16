@@ -24,7 +24,7 @@ export default function LoginSelectionScreen({ navigation }) {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { padding: formPadding, paddingTop: Math.max(headerTopPadding + 18, 48) },
+          { padding: formPadding, paddingTop: Math.max(headerTopPadding + 8, 24) },
         ]}
       >
         <View style={styles.header}>

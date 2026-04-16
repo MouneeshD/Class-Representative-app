@@ -108,7 +108,7 @@ export default function StudentDashboard({ navigation }) {
     <View style={styles.container}>
       <LinearGradient
         colors={['#6A1B9A', '#9C27B0']}
-        style={[styles.header, { paddingTop: headerTopPadding }]}
+        style={[styles.header, { paddingTop: headerTopPadding + 8 }]}
       >
         <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Student Dashboard</Text>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>

@@ -10,7 +10,7 @@ export const useResponsiveLayout = () => {
   const isCompact = isNarrow || isShort;
   const horizontalPadding = isCompact ? 12 : 16;
   const formPadding = isCompact ? 16 : 24;
-  const headerTopPadding = Math.max(insets.top + 8, 40);
+  const headerTopPadding = insets.top > 0 ? insets.top + 6 : 14;
   const verticalGap = isShort ? 10 : 14;
 
   return {

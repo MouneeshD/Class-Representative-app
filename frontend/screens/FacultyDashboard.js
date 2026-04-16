@@ -75,7 +75,7 @@ export default function FacultyDashboard({ navigation }) {
     <View style={styles.container}>
       <LinearGradient
         colors={['#FF6F00', '#FF8F00']}
-        style={[styles.header, { paddingTop: headerTopPadding }]}
+        style={[styles.header, { paddingTop: headerTopPadding + 8 }]}
       >
         <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Faculty Dashboard</Text>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>

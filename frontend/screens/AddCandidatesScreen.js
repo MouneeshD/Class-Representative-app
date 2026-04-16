@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Modal,
   BackHandler,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
@@ -316,7 +318,16 @@ export default function AddCandidatesScreen({ route, navigation }) {
         </TouchableOpacity>
       </LinearGradient>
 
-      <ScrollView style={[styles.content, { paddingHorizontal: horizontalPadding }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+        style={{ flex: 1 }}
+      >
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 28 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <LinearGradient
           colors={['#FF6F00', '#FF8F00']}
           style={[styles.electionCard, isCompact && styles.electionCardCompact]}
@@ -413,6 +424,7 @@ export default function AddCandidatesScreen({ route, navigation }) {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal
         visible={editModalVisible}
@@ -510,7 +522,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', flex: 1, textAlign: 'center' },
   headerTitleCompact: { fontSize: 18 },
   finishButton: { padding: 4 },
-  content: { flex: 1, padding: 16 },
+  content: { flex: 1 },
   electionCard: { padding: 20, borderRadius: 16, marginBottom: 20, elevation: 4 },
   electionCardCompact: { padding: 14 },
   electionTitle: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12 },

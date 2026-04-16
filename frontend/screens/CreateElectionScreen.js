@@ -8,7 +8,6 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -89,12 +88,16 @@ export default function CreateElectionScreen({ navigation }) {
         <View style={{ width: 24 }} />
       </LinearGradient>
 
-      <SafeAreaView style={{flex: 1}}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{flex: 1}}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingHorizontal: formPadding, paddingBottom: 28 }}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView style={[styles.content, { paddingHorizontal: formPadding }]}>
         <LinearGradient
           colors={['#FF6F00', '#FF8F00']}
           style={styles.infoCard}
@@ -150,9 +153,8 @@ export default function CreateElectionScreen({ navigation }) {
             </LinearGradient>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
   headerTitleCompact: { fontSize: 18 },
-  content: { flex: 1, padding: 24 },
+  content: { flex: 1 },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
